@@ -45,7 +45,7 @@ pytest tests/
 ### 1. The Computed Oracle Pipeline
 
 ![Computed Quantum Distance Oracle Pipeline](figures/oracle_pipeline.png)
-*Figure 1: Pipeline for the computed distance oracle showing register allocation across 5 quantum registers, arithmetic stages, comparator, phase kick, and uncomputation.*
+*Figure 1:* Pipeline for the computed distance oracle showing register allocation across 5 quantum registers, arithmetic stages, comparator, phase kick, and uncomputation.
 
 The distance oracle maps $|i\rangle \to (-1)^{[|f(i)-t| < \text{threshold}]} |i\rangle$ in $\mathcal{O}(\text{poly}(n, m))$ gates using $n + 2m + 1$ qubits (for $m > 1$):
 
@@ -73,10 +73,10 @@ Because the number of marked items is unknown and changes as the threshold decre
 4. Terminate when distance 0 is found or the total query budget of $\approx 11.25\sqrt{N}$ is exhausted.
 
 ![Dürr–Høyer Search Trajectory](figures/durr_hoyer_trajectory.png)
-*Figure 2: Left: Search space landscape $|f(i)-t|$ with global minimum marked. Right: Dynamic threshold ladder stepping down round-by-round.*
+*Figure 2:* Left: Search space landscape $|f(i)-t|$ with global minimum marked. Right: Dynamic threshold ladder stepping down round-by-round.
 
 ![Grover Amplitude Amplification](figures/grover_amplitudes.png)
-*Figure 3: Measurement probabilities after threshold discovery, comparing amplified probability on the closest set (>94%) against the uniform state ($1/N = 12.5\%$).*
+*Figure 3:* Measurement probabilities after threshold discovery, comparing amplified probability on the closest set (>94%) against the uniform state ($1/N = 12.5\%$).
 
 ---
 
@@ -98,7 +98,7 @@ We implement both classical baselines (`classical_closest` for black-box and `cl
 Here we benchmark scaling for $f(i) = (2i^2 + 3i + 1) \bmod 2^{n+1}$ with target $t=6$ and threshold $1$ ($k=1$ unique marked item).
 
 ![NISQ Gate Complexity Scaling](figures/nisq_scaling.png)
-*Figure 4: Scaling of transpiled NISQ gates (basis $\{u, cx\}$) for Single-Run Grover and Dürr–Høyer search vs. classical bit operations and CPU instructions.*
+*Figure 4:* Scaling of transpiled NISQ gates (basis $\{u, cx\}$) for Single-Run Grover and Dürr–Høyer search vs. classical bit operations and CPU instructions.
 
 **Note on units and empirical slopes:**
 Comparing quantum gates to classical instructions illustrates algorithmic complexity, not wall-clock speedup (a 2-qubit gate cycle is much slower than a CPU instruction). While Grover achieves $\mathcal{O}(\sqrt{N})$ query complexity, total gate complexity is $\mathcal{O}(\sqrt{N} \log^3 N)$. At $n \le 12$, the polylogarithmic growth of the arithmetic oracle makes the empirical quantum gate slope $\approx 1.0$ (close to the CPU instruction slope), but it clearly outperforms classical bit-level operations (slope $\approx 1.43$).
@@ -121,7 +121,7 @@ Comparing quantum gates to classical instructions illustrates algorithmic comple
 | 12 | 13 | 4,096 | 14,095 (7,414) | 15,330 | 766,500 | 12,582,864 | 1,282,048 | 12,288 |
 
 *Table notes:*
-* **Empirical slopes ($n \le 12$):** Single-Run Grover $\sim N^{1.00}$; Dürr–Høyer $\sim N^{0.96}$; Classical bit-ops $\sim N \log^2 N$; Classical CPU-ops $\sim 3N$.
+* **Empirical slopes** ($n \le 12$): Single-Run Grover $\sim N^{1.00}$; Dürr–Høyer $\sim N^{0.96}$; Classical bit-ops $\sim N \log^2 N$; Classical CPU-ops $\sim 3N$.
 * **Single-Run Grover:** Uses exact optimal rotation count $R = \arg\max_R \sin^2((2R+1)\arcsin\sqrt{k/N})$.
 * **Dürr–Høyer Bound:** Evaluated at expected query count $(45/4)\sqrt{N} + 0.7\log_2^2 N$.
 * **Classical CPU-Ops:** Evaluates $(a \cdot i^2 + b \cdot i + c) \bmod 2^m$ in $\approx 3$ word instructions.
@@ -151,7 +151,7 @@ When $N > 2^m$, periodicity $f(i + 2^m) \equiv f(i) \pmod{2^m}$ caps classical e
 We compare an explicit value-loading QROM oracle (optimized with Gray-code multi-controlled $X$ transitions) against the coherent `QuadraticForm` oracle, transpiled to basis $\{u, cx\}$ with `optimization_level=1`:
 
 ![Empirical QROM vs Computed Oracle](figures/qrom_vs_coherent_nisq.png)
-*Figure 5: Left: Transpiled gate counts for Gray-code QROM vs. coherent arithmetic. Right: QROM gate overhead multiplier ($11.38\times$ at $N=64$).*
+*Figure 5:* Left: Transpiled gate counts for Gray-code QROM vs. coherent arithmetic. Right: QROM gate overhead multiplier ($11.38\times$ at $N=64$).
 
 While coherent QFT arithmetic scales as $\mathcal{O}(n^2 m)$, tabular QROM scales as $\Theta(m \cdot 2^n)$, requiring **1.56× more gates** at $n=3$ ($N=8$), **3.09×** at $n=4$ ($N=16$), and **11.38×** at $n=6$ ($N=64$).
 
@@ -204,7 +204,7 @@ In fault-tolerant quantum computing (FTQC), arbitrary continuous rotations (such
 ### 2. Continuous QFT vs. Discrete QROM Crossover
 
 ![Fault-Tolerant Clifford+T Crossover](figures/ftqc_crossover.png)
-*Figure 6: Clifford+T gate cost for optimal discrete QROM ($8(N-1)$ T-gates) vs. continuous-phase QuadraticForm arithmetic across synthesis precision budgets $\varepsilon$, showing the crossover around $N \approx 10^6$.*
+*Figure 6:* Clifford+T gate cost for optimal discrete QROM ($8(N-1)$ T-gates) vs. continuous-phase QuadraticForm arithmetic across synthesis precision budgets $\varepsilon$, showing the crossover around $N \approx 10^6$.
 
 <details>
 <summary>Fault-tolerant value loader comparison table (T-count, n = 2 to 20)</summary>
