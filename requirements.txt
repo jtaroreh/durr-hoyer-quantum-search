@@ -1,0 +1,8 @@
+# Unpinned convenience requirements for standard pip workflows.
+# For exact reproducible environments, use `uv sync --locked --all-extras` (driven by uv.lock).
+qiskit>=1.0.0
+qiskit-aer>=0.15.0
+numpy>=1.26
+matplotlib>=3.8.0
+seaborn>=0.13.0
+pytest>=8.0

@@ -1,0 +1,98 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "durr-hoyer-quantum-search"
+version = "0.2.0"
+description = "Educational reference demo of Dürr–Høyer quantum search with a computed arithmetic oracle"
+readme = "README.md"
+authors = [
+    { name = "Joel Taroreh", email = "jtaroreh@users.noreply.github.com" }
+]
+license = "MIT"
+requires-python = ">=3.10, <3.13"
+dependencies = [
+    "qiskit>=1.0.0",
+    "numpy>=1.26",
+]
+
+keywords = ["quantum-computing", "grover-search", "durr-hoyer", "qiskit", "quantum-algorithms"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+
+[project.scripts]
+durr-heyer-demo = "demo:main"
+durr-heyer-scale = "scaling:main"
+durr-hoyer-demo = "demo:main"
+durr-hoyer-scale = "scaling:main"
+
+[project.urls]
+Homepage = "https://github.com/jtaroreh/durr-hoyer-quantum-search"
+Repository = "https://github.com/jtaroreh/durr-hoyer-quantum-search"
+Issues = "https://github.com/jtaroreh/durr-hoyer-quantum-search/issues"
+
+[project.optional-dependencies]
+sim = [
+    "qiskit-aer>=0.15.0",
+]
+plot = [
+    "matplotlib>=3.8.0",
+    "seaborn>=0.13.0",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.4.0",
+    "mypy>=1.9.0",
+    "build>=1.1.0",
+]
+all = [
+    "durr-hoyer-quantum-search[sim,plot,dev]",
+]
+
+[tool.setuptools]
+py-modules = ["demo", "scaling"]
+
+[tool.setuptools.package-data]
+closest_search = ["py.typed"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["closest_search*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+python_files = "test_*.py"
+filterwarnings = [
+    "error",
+    "ignore:.*:DeprecationWarning:qiskit.*",
+    "ignore:.*:PendingDeprecationWarning:qiskit.*",
+    "ignore:.*:DeprecationWarning:qiskit_aer.*",
+    "ignore:.*:PendingDeprecationWarning:qiskit_aer.*",
+]
+
+
+[tool.mypy]
+ignore_missing_imports = true
+warn_unused_configs = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+
+
+

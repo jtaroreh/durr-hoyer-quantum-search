@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use or reference this pedagogical quantum search implementation, please cite it as below."
+authors:
+  - family-names: "Taroreh"
+    given-names: "Joel"
+title: "Dürr–Høyer Quantum Search: Educational Reference Demo"
+version: 0.2.0
+date-released: 2026-08-02
+url: "https://github.com/jtaroreh/durr-hoyer-quantum-search"
+repository-code: "https://github.com/jtaroreh/durr-hoyer-quantum-search"
