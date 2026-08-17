@@ -314,19 +314,19 @@ def main() -> None:
         print("- **Dual-Table Reporting:** Table 3A isolates the Value Loader stage ($T_{\\text{load}}$) where architectural divergence occurs; Table 3B captures the complete Distance Oracle ($T_{\\text{oracle}}$).")
         print("- **Analytical Teaching Proxy & Non-Clifford Gate Accounting:** Coherent rotations model an analytical proxy charging 3 $R_z$ per $CP$ and 7 $R_z$ per $CCPhase$ (unassisted), giving $K_{\\text{total}} = 12nm + 7n(n-1)m + 6m(m-1)$. Note that in binary, $x_j^2 = x_j$, so Qiskit's `QuadraticFormGate` merges diagonal quadratic terms with linear terms into $nm$ $CP$ gates; the unmerged closed form provides a clean, conservative analytical proxy for continuous rotation overhead.")
         print("- **Small-N QROM Advantage:** For small-to-medium $N \\le 2^{19}$, QROM is **10× to 100× cheaper** in $T$-count because discrete Toffoli selection trees require zero continuous rotation synthesis, whereas coherent arithmetic synthesizes thousands of non-Clifford rotations.")
-        print("- **Analytical Gridsynth Proxy:** Coherent $T$-counts model an analytical proxy by treating all phase angles as arbitrary continuous $R_z$ rotations. Exact low-order dyadic QFT/quadratic angles ($CZ, \\text{Controlled-}S, T$) do not require full $\\varepsilon$-synthesis; compiling exact dyadics or using 1 clean ancilla ($4 R_z$ per $CCPhase$) reduces coherent $T$-count and shifts the crossover leftward.")
+        print("- **Analytical Gridsynth Proxy Status:** Coherent $T$-counts model an unvalidated closed-form proxy by treating all phase angles as arbitrary continuous $R_z$ rotations based on Ross-Selinger (2016) asymptotics. Exact low-order dyadic QFT/quadratic angles ($CZ, \\text{Controlled-}S, T$) do not require full $\\varepsilon$-synthesis; compiling exact dyadics or using 1 clean ancilla ($4 R_z$ per $CCPhase$) reduces coherent $T$-count and shifts the crossover leftward.")
+        print("- **Continuous QFT vs. Discrete Reversible Arithmetic:** The crossover at $N \\approx 10^6$ is specific to continuous Draper QFT arithmetic. Compiling known polynomial functions via discrete reversible arithmetic (e.g. Toffoli-based adders/multipliers like Gidney adders) requires $\\mathcal{O}(n^2)$ Toffolis ($4T$ each) with $\\varepsilon = 0$, shifting the crossover against QROM to $N \\sim 10^2\\text{--}10^3$.")
         print("- **Toffoli Synthesis Model:** QROM Toffoli cost ($4T$ compute, $8T$ reversible) assumes measurement-assisted / catalyst decomposition (Jones 2013, Gidney 2018); standard unitary Clifford+$T$ Toffoli is $7T$.")
-        print("- **FTQC Crossover Range:** Under this analytical unmerged model, the asymptotic polynomial advantage of coherent arithmetic overcomes rotation synthesis overhead at $N \\approx 10^6 \\text{ to } 2 \\times 10^6$ ($n = 20\\text{--}21$).")
     else:
         print("-" * len(ft_full_header))
         print("\n* Key Fault-Tolerant Insights & Model Caveats:")
         print("  - Dual-Table Scope: Table 3A reports T_load; Table 3B reports complete distance oracle T_oracle.")
         print("  - Analytical Teaching Proxy: Coherent loader charges 3 Rz per CP and 7 Rz per CCPhase (K_total = 12nm + 7n(n-1)m + 6m(m-1)).")
         print("  - Small-N QROM Advantage: For N <= 2^19, QROM is substantially cheaper because discrete Toffolis require 0 synthesis error.")
-        print("  - Analytical Proxy: Treating all non-Clifford rotations as arbitrary R_z is a proxy upper bound;")
+        print("  - Analytical Proxy: Treating all non-Clifford rotations as arbitrary continuous R_z is a proxy upper bound;")
         print("    exact dyadic QFT/quadratic angles (CZ, CS, T) or ancilla assistance would reduce coherent T-count.")
+        print("  - Arithmetic Paradigm: Continuous Draper QFT yields crossover at N ~ 10^6; discrete Toffoli arithmetic shifts crossover to N ~ 10^2 - 10^3.")
         print("  - Toffoli Model: 4T Toffoli assumes measurement-assisted decomposition (Jones 2013, Gidney 2018).")
-        print("  - FTQC Crossover: Coherent arithmetic beats QROM at N ~ 10^6 to 2x10^6 (n = 20-21).")
 
     if not args.markdown:
         print("\n" + "=" * 104)

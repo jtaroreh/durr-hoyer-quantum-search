@@ -6,12 +6,23 @@ Provides analytical Clifford+T resource proxies for:
   - Common downstream oracle stages (Draper adders, comparators, and phase kick)
   - Classical bit-operation baselines for polynomial evaluation
 
-Note on Pedagogical Model Scope:
-  These models provide an analytical teaching proxy based on literature scaling
-  (Ross & Selinger 2016 typical-case 3*log2(1/eps) asymptotic and Babbush et al.
-  2018 unary iteration), not compiler-synthesized exact gate layouts. They illustrate
-  the qualitative lesson that continuous rotation synthesis overhead can invert
-  the NISQ advantage at small-to-medium N.
+Note on Pedagogical Model Scope & Crossover Caveats:
+  These models provide an unvalidated closed-form analytical teaching proxy based on
+  literature scaling (Ross & Selinger 2016 typical-case 3*log2(1/eps) asymptotic and Babbush
+  et al. 2018 unary iteration), not compiler-synthesized exact gate layouts from a tool
+  like gridsynth.
+
+  Key Model Assumptions & Practical Context:
+    1. Continuous Rotation Assumption: The coherent model treats all phase rotations as
+       arbitrary continuous angles requiring full epsilon-synthesis. In practice, exact
+       dyadic angles (CZ, CS, T) require 0 or 1 T gate, and binary algebraic merging
+       (x_j^2 = x_j) further reduces phase couplings.
+    2. Arithmetic Paradigm: The headline crossover at N ~ 10^6 is specific to continuous-phase
+       Draper QFT arithmetic. In practical FTQC, known classical polynomial functions are
+       typically implemented via discrete reversible arithmetic (e.g. Toffoli-based adders
+       and multipliers like Gidney's carry-ripple/lookahead adders) with zero rotation
+       synthesis error (eps = 0) and O(n^2) Toffolis (4T each), which shifts the crossover
+       against QROM from N ~ 10^6 down to N ~ 10^2 - 10^3.
 """
 
 from __future__ import annotations
@@ -103,7 +114,8 @@ def ftqc_coherent_loader_t_count(
     Sensitivity & Scenarios:
       Treating all rotations as continuous arbitrary angles provides an unmerged analytical proxy.
       Compiling low-order dyadic QFT/quadratic angles (CZ, CS, T) reduces continuous synthesis
-      overhead and shifts the crossover point leftward.
+      overhead and shifts the crossover point leftward. Discrete reversible arithmetic (e.g.
+      Toffoli-based adders) avoids continuous rotation synthesis altogether.
     """
     if n < 1 or m < 1:
         raise ValueError(f"n and m must be positive integers, got n={n}, m={m}")

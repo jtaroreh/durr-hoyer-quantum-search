@@ -118,11 +118,12 @@ This project implements both classical baselines (`classical_closest` for black-
 Gate scaling across index qubits $n$ for $f(i) = (2i^2 + 3i + 1) \bmod 2^{n+1}$ with target $t=6$, threshold $1$ (exact unique target $k=1$). Compares transpiled NISQ gates under both Single-Run Grover and Dürr–Høyer minimum finding against classical models:
 
 ![NISQ Gate Complexity Scaling](figures/nisq_scaling.png)
-Figure 4: Log-log scaling of transpiled elementary NISQ gates in basis $\{u, cx\}$ for Single-Run Grover and Dürr–Høyer search (scaling as $\sim \sqrt{N}$) vs. classical black-box bit operations and CPU instructions (scaling as $\sim N$).
+Figure 4: Log-log scaling of transpiled elementary NISQ gates in basis $\{u, cx\}$ for Single-Run Grover and Dürr–Høyer search (scaling as $\sim \sqrt{N}\,\text{polylog}(N)$) vs. classical black-box bit operations ($\sim N\,\text{polylog}(N)$) and CPU instructions ($\sim N$).
 
 > [!IMPORTANT]
-> **Unit Mismatch & Operation-Count Framing:**
-> Comparing transpiled elementary NISQ gates in basis $\{u, cx\}$ against classical bit/word operations illustrates algorithmic scaling, *not* physical runtime speedup. A single 2-qubit quantum gate cycle is orders of magnitude slower than a 64-bit classical CPU instruction.
+> **Unit Mismatch & Gate Complexity Framing:**
+> - **Algorithmic Scaling vs. Physical Runtime:** Comparing transpiled elementary NISQ gates in basis $\{u, cx\}$ against classical bit/word operations illustrates algorithmic scaling, *not* physical runtime speedup (a 2-qubit quantum gate cycle is orders of magnitude slower than a 64-bit CPU instruction).
+> - **Query vs. Gate Complexity:** Quantum search guarantees $\mathcal{O}(\sqrt{N})$ *queries*, but total gate complexity is $\mathcal{O}(\sqrt{N}\,\text{polylog}(N))$ ($\mathcal{O}(\sqrt{N} \log^3 N)$ for quadratic arithmetic). At $n \le 12$, oracle gate growth inflates the empirical log-log slope to $\approx 1.0$ (matching the CPU slope), though it genuinely outpaces classical bit-level operations ($\text{slope} \approx 1.43$).
 
 <details>
 <summary><b>📊 View Full Regime 1 Gate Scaling Data Table (n = 2 to 12, N ≤ 4,096)</b></summary>
@@ -141,7 +142,8 @@ Figure 4: Log-log scaling of transpiled elementary NISQ gates in basis $\{u, cx\
 | 11 | 12 | 2,048 | 11,536 (5,996) | 12,533 | 438,655 | 7,442,307 | 542,720 | 6,144 |
 | 12 | 13 | 4,096 | 14,095 (7,414) | 15,330 | 766,500 | 12,582,864 | 1,282,048 | 12,288 |
 
-*Notes on accounting:*
+*Notes on accounting & empirical slopes:*
+- **Empirical Log-Log Slopes ($n \le 12$):** Single-Run Grover gates: slope $\approx 1.005$ ($\sim N^{1.00}$); Dürr–Høyer gates: slope $\approx 0.964$ ($\sim N^{0.96}$); Classical bit-ops: slope $\approx 1.434$ ($\sim N \log^2 N$); Classical CPU-ops: slope $\approx 1.000$ ($\sim 3N$). The logarithmic growth of the arithmetic oracle accounts for the $\approx 1.0$ empirical slope at small $N$.
 - **Single-Run Grover:** Ideal single-run using exact discrete candidate evaluation $R = \arg\max_R \sin^2((2R+1)\arcsin\sqrt{k/N})$ over integers neighboring $R^* = (\pi - \theta)/(2\theta)$ with $\theta = 2\arcsin\sqrt{k/N}$, correctly yielding $R=1$ at $N=4, k=1$ and $R=0$ when $k > N/2$ without destructive over-rotation.
 - **Dürr–Høyer (1996) Gate Envelope:** Proven expected total query complexity $(45/4)\sqrt{N} + 0.7\log_2^2 N$ function evaluation calls across randomized rounds (Grover search queries + classical candidate verifications). Gate total models an all-quantum query execution upper bound: $E[Q_{\text{quant}}] \times G_{\text{iter}}$.
 - **Classical CPU-Ops:** Modern word-RAM CPU evaluates $(A \cdot i^2 + B \cdot i + C) \bmod 2^m$ in $\approx 3$ CPU instructions.
@@ -280,14 +282,14 @@ Fault-tolerant Clifford+T cost comparison for the **complete Distance Oracle** (
 
 ### 3. Key Fault-Tolerant Insights & Methodology Context
 
-1. **Why QROM is Dramatically Cheaper at Small-to-Medium Problem Sizes (N ≤ 10⁵):**
-   Under raw NISQ uncompiled gates in basis $\{u, cx\}$, coherent arithmetic appears immediately cheaper than QROM because a continuous phase gate $CP(\theta)$ is counted as a single unit gate. However, in FTQC, each continuous rotation costs $\approx 60\text{--}150$ $T$ gates to synthesize via magic state distillation. In contrast, discrete Toffolis require exactly $4T$ gates with zero synthesis overhead at $\varepsilon = 0$. Consequently, QROM is dramatically cheaper until $N \approx 10^6$.
-2. **Analytical Gridsynth Proxy Assumption:**
-   The coherent arithmetic model treats all $K_{\text{total}}$ rotations as arbitrary continuous $R_z$ angles synthesized via gridsynth. In practice, low-order dyadic QFT/quadratic angles ($CZ$, $\text{Controlled-}S$, $T$) compile into exact Clifford+T gates without $\varepsilon$-synthesis, and binary diagonal merging ($x_j^2 = x_j$) reduces phase couplings. Treating all rotations as unmerged arbitrary gridsynth calls provides an analytical proxy upper bound on coherent arithmetic $T$-count; compiling exact dyadics or utilizing ancilla assistance ($4 R_z$ per $CCPhase$) reduces coherent $T$-count and shifts the crossover point leftward.
-3. **Toffoli Synthesis Model:**
+1. **Why QROM is Dramatically Cheaper at Small-to-Medium Problem Sizes ($N \le 10^5$):**
+   Under raw NISQ gate counts in basis $\{u, cx\}$, coherent arithmetic appears immediately cheaper because a continuous phase gate $CP(\theta)$ is counted as a single unit gate. However, in FTQC, each continuous rotation costs $\approx 60\text{--}150$ $T$ gates to synthesize via magic state distillation. In contrast, discrete Toffolis require exactly $4T$ gates with zero synthesis overhead at $\varepsilon = 0$. Consequently, QROM is dramatically cheaper until $N \approx 10^6$.
+2. **Analytical Gridsynth Proxy & Conservative Assumptions:**
+   The coherent arithmetic model is an unvalidated closed-form analytical proxy built on Ross & Selinger (2016) $3 \log_2(1/\varepsilon)$ asymptotics, treating all rotations as arbitrary continuous angles. In practice, exact low-order dyadics ($CZ, CS, T$) require $0$ or $1$ $T$ gate without synthesis error, algebraic diagonal merging ($x_j^2 = x_j$) eliminates redundant couplings, and ancilla assistance reduces rotation counts, shifting the crossover leftward.
+3. **Continuous QFT Phase Arithmetic vs. Discrete Reversible Arithmetic:**
+   The headline crossover at $N \approx 10^6$ ($n = 20\text{--}21$) is specifically an upper bound for *continuous-phase Draper QFT arithmetic*. In practical FTQC compilation, polynomial arithmetic $f(i) = Ai^2+Bi+C$ is typically implemented via **discrete reversible arithmetic** (e.g., Gidney carry-ripple/lookahead adders) using $\mathcal{O}(n^2)$ discrete Toffolis ($4T$ each) with $\varepsilon = 0$, shifting the crossover against exponential QROM ($8 \cdot 2^n$) from $N \approx 10^6$ down to $N \sim 10^2\text{--}10^3$.
+4. **Toffoli Synthesis Model:**
    QROM Toffoli accounting ($4T$ compute, $8T$ reversible uncompute) models measurement-assisted / catalyst state distillation (Jones 2013, Gidney 2018); standard unitary Clifford+T Toffolis cost $7T$ each.
-4. **The FTQC Crossover Range (N ≈ 10⁶ to 2 × 10⁶):**
-   The asymptotic scaling of coherent arithmetic, $O(n^3 \log(1/\varepsilon))$, eventually beats exponential QROM, $O(2^n)$, crossing over at $n = 20\text{--}21$, corresponding to $N \approx 1,048,576 \text{ to } 2,097,152$ candidate states.
 
 ---
 
