@@ -177,6 +177,9 @@ Figure 5: Left: Transpiled gate counts in basis $\{u, cx\}$ for Gray-code tabula
 
 Gray-code traversal with $g_k = k \oplus (k \gg 1)$ eliminates multi-qubit $X$ decoding sweeps, flipping only 1 index qubit per transition. While coherent QFT phase arithmetic scales as $O(n^2 m)$, tabular QROM scales as $\Theta(m \cdot 2^n)$, requiring **1.56× more gates** at $n=3$ ($N=8$), **3.09× more gates** at $n=4$ ($N=16$), and **11.38× more gates** at $n=6$ ($N=64$).
 
+> [!NOTE]
+> **Metric Inversion Preview:** While Gray-code QROM suffers exponential gate explosion under NISQ ($11.38\times$ more gates at $N=64$), this advantage completely inverts in Fault-Tolerant regimes where continuous rotation distillation heavily penalizes coherent arithmetic (see [Fault-Tolerant Scaling](#fault-tolerant-ftqc-cliffordt-resource-scaling-proxy--crossover)).
+
 <details>
 <summary><b>📊 View Empirical QROM vs Computed Gate Count Data Table (n = 2 to 6)</b></summary>
 
@@ -231,10 +234,10 @@ The complete search oracle decomposes into two independent stages:
 
 </details>
 
-### 2. Dual Fault-Tolerant Resource Comparison (Crossover at N ≈ 10⁶)
+### 2. Dual Fault-Tolerant Resource Comparison: Continuous QFT vs. Optimal QROM
 
 ![Fault-Tolerant Clifford+T Crossover](figures/ftqc_crossover.png)
-Figure 6: Log-log comparison of analytical Clifford+T gate cost proxies for discrete QROM with $8(N-1)$ $T$-gates vs. coherent arithmetic across synthesis precision budgets $\varepsilon$, illustrating the crossover band at $N \approx 10^6 \text{ to } 2 \times 10^6$.
+Figure 6: Log-log comparison of analytical Clifford+T gate cost proxies for optimal discrete QROM (Babbush et al. 2018 unary iteration, $8(N-1)$ $T$-gates) vs. continuous-phase QuadraticForm arithmetic across synthesis precision budgets $\varepsilon$, illustrating the continuous rotation synthesis crossover band at $N \approx 10^6 \text{ to } 2 \times 10^6$.
 
 <details>
 <summary><b>📊 View Regime 3A: Fault-Tolerant Value Loader Comparison Table (T_load, n = 2 to 20)</b></summary>
@@ -282,14 +285,14 @@ Fault-tolerant Clifford+T cost comparison for the **complete Distance Oracle** (
 
 ### 3. Key Fault-Tolerant Insights & Methodology Context
 
-1. **Why QROM is Dramatically Cheaper at Small-to-Medium Problem Sizes ($N \le 10^5$):**
-   Under raw NISQ gate counts in basis $\{u, cx\}$, coherent arithmetic appears immediately cheaper because a continuous phase gate $CP(\theta)$ is counted as a single unit gate. However, in FTQC, each continuous rotation costs $\approx 60\text{--}150$ $T$ gates to synthesize via magic state distillation. In contrast, discrete Toffolis require exactly $4T$ gates with zero synthesis overhead at $\varepsilon = 0$. Consequently, QROM is dramatically cheaper until $N \approx 10^6$.
-2. **Analytical Gridsynth Proxy & Conservative Assumptions:**
-   The coherent arithmetic model is an unvalidated closed-form analytical proxy built on Ross & Selinger (2016) $3 \log_2(1/\varepsilon)$ asymptotics, treating all rotations as arbitrary continuous angles. In practice, exact low-order dyadics ($CZ, CS, T$) require $0$ or $1$ $T$ gate without synthesis error, algebraic diagonal merging ($x_j^2 = x_j$) eliminates redundant couplings, and ancilla assistance reduces rotation counts, shifting the crossover leftward.
-3. **Continuous QFT Phase Arithmetic vs. Discrete Reversible Arithmetic:**
-   The headline crossover at $N \approx 10^6$ ($n = 20\text{--}21$) is specifically an upper bound for *continuous-phase Draper QFT arithmetic*. In practical FTQC compilation, polynomial arithmetic $f(i) = Ai^2+Bi+C$ is typically implemented via **discrete reversible arithmetic** (e.g., Gidney carry-ripple/lookahead adders) using $\mathcal{O}(n^2)$ discrete Toffolis ($4T$ each) with $\varepsilon = 0$, shifting the crossover against exponential QROM ($8 \cdot 2^n$) from $N \approx 10^6$ down to $N \sim 10^2\text{--}10^3$.
+1. **The Fault-Tolerant Metric Inversion ($N \le 10^5$):**
+   Under raw NISQ gate counts, coherent arithmetic appears cheaper because continuous phase gates $CP(\theta)$ count as single unit gates. In FTQC, continuous rotations in `QuadraticForm` require expensive magic state distillation ($\approx 60\text{--}150$ $T$ gates each), whereas discrete Toffolis require only $4T$ gates with zero synthesis error ($\varepsilon = 0$). Consequently, QROM is dramatically cheaper at small-to-medium problem sizes across all table architectures.
+2. **Crossover Sensitivity to Compilation Pairings ($N \approx 10^3 \text{ vs. } 10^6$):**
+   The $N \approx 10^6$ crossover in Figure 6 reflects the asymmetric pairing of theoretical best-case unary iteration QROM ($8(N-1)$ $T$-gates) against unmerged continuous QFT rotation synthesis. In contrast, compiling the repo's Gray-code table or using discrete reversible arithmetic (e.g., Toffoli adders with $\mathcal{O}(n^2)$ $T$-gates) places the crossover near $N \approx 10^3$.
+3. **Analytical Gridsynth Proxy Assumptions:**
+   Treating all rotations in `QuadraticForm` as arbitrary continuous angles provides a conservative upper bound. Compiling exact dyadic angles ($CZ, CS, T$) with $0\text{--}1$ $T$ gate and merging diagonal terms ($x_j^2 = x_j$) further reduces continuous coherent $T$-counts.
 4. **Toffoli Synthesis Model:**
-   QROM Toffoli accounting ($4T$ compute, $8T$ reversible uncompute) models measurement-assisted / catalyst state distillation (Jones 2013, Gidney 2018); standard unitary Clifford+T Toffolis cost $7T$ each.
+   QROM Toffoli accounting ($4T$ compute, $8T$ reversible uncompute) models measurement-assisted / catalyst state distillation (Jones 2013, Gidney 2018); standard unitary Clifford+$T$ Toffolis cost $7T$ each.
 
 ---
 
