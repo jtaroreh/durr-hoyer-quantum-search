@@ -1,18 +1,18 @@
-# Dürr–Høyer Quantum Search: Educational Reference Demo
+# Dürr–Høyer Quantum Search
 
-An educational, open-source reference implementation of **quantum minimum finding**: given a function $f(i) = (A \cdot i^2 + B \cdot i + C) \bmod 2^m$ over $N = 2^n$ indices and a query target $t$, find the index whose value is closest to $t$ — i.e., minimizing the distance $|f(i) - t|$ — using Grover search wrapped in the Dürr–Høyer minimum-finding loop with a computed arithmetic oracle.
+A reference implementation of the Dürr–Høyer quantum minimum-finding algorithm in Qiskit.
 
-> [!NOTE]
-> **Pedagogical Goal & Framing:**
-> This repository demonstrates **how computed arithmetic preserves the asymptotic gate complexity of Grover search** — $O(\text{poly}(\log N) \cdot \sqrt{N})$ — over $\Omega(N)$ lookup tables in quantum search. It explores the practical **metric inversion under fault-tolerant Clifford+T compilation** (where discrete QROM selection trees dominate at small-to-medium $N$ due to rotation synthesis overhead) and contrasts quantum scaling against **classical period-reduction and algebraic baselines**.
+Given a quadratic function $f(i) = (a \cdot i^2 + b \cdot i + c) \bmod 2^m$ over $N = 2^n$ indices and a target value $t$, the algorithm finds the index minimizing the distance $|f(i) - t|$ using Grover search wrapped in the Dürr–Høyer adaptive threshold loop.
+
+The primary goal of this repository is to demonstrate why **computed arithmetic oracles** are necessary to preserve Grover's speedup: lookup tables (QROM) require $\Omega(N)$ gates per call, which destroys the $\mathcal{O}(\sqrt{N})$ gate advantage. We also examine how this comparison inverts in fault-tolerant Clifford+T architectures and evaluate performance against classical baselines.
 
 ---
 
-## Why Computed Oracles Matter (QROM vs. Arithmetic)
+## Why Computed Oracles Matter
 
-In textbook Grover search demonstrations, oracle functions are often treated as lookup tables (QROM). However, a QROM oracle for $N$ values requires $\Omega(N)$ gates per call—**erasing the** $\Theta(\sqrt{N})$ **query advantage of Grover search** at the physical gate level: $O(N\sqrt{N})$ total gates.
+In textbook presentations of Grover search, the oracle is often treated as an abstract black box or an explicit lookup table (QROM). But loading an arbitrary table of $N$ values into quantum states requires $\Omega(N)$ gates per query. Running $\mathcal{O}(\sqrt{N})$ Grover iterations with a tabular oracle therefore costs $\mathcal{O}(N \sqrt{N})$ total gates—slower than a simple $\mathcal{O}(N)$ classical scan.
 
-To preserve Grover's asymptotic gate advantage in quantum search, the oracle must *compute* $f(i)$ coherently using reversible arithmetic circuits in $O(\text{poly}(\log N))$ gates per call. This repository constructs such an oracle in Qiskit using QFT phase arithmetic (`QuadraticForm`, Draper adder, and `IntegerComparator`).
+To retain an asymptotic advantage at the physical gate level ($\mathcal{O}(\text{poly}(\log N) \cdot \sqrt{N})$ gates total), the oracle must compute $f(i)$ coherently on the fly in $\mathcal{O}(\text{poly}(\log N))$ gates. In this project, we build a reversible arithmetic oracle using QFT phase arithmetic (`QuadraticForm`, Draper adder, and `IntegerComparator`).
 
 ---
 
@@ -22,111 +22,89 @@ To preserve Grover's asymptotic gate advantage in quantum search, the oracle mus
 git clone https://github.com/jtaroreh/durr-hoyer-quantum-search.git
 cd durr-hoyer-quantum-search
 
-# Recommended: reproducible environment with all extras (uv)
+# Recommended: locked environment with all dependencies (uv)
 uv sync --locked --all-extras
 
-# Standard editable development installation with pip (simulator + plotting)
+# Or install with pip in editable mode
 pip install -e .[all]
 
-# Minimal installation (core algorithm + CLI tables only)
-pip install -e .
-
-# Run end-to-end search demo (N=8) and save publication-quality plots
+# Run the end-to-end search demo (N=8) and save plots
 python demo.py --save-plots figures/
-# Or use the installed CLI command:
-durr-hoyer-demo --save-plots figures/
 
-# Run gate scaling analysis and save complexity + crossover plots
+# Run gate scaling benchmarks across NISQ and FTQC regimes
 python scaling.py --max-n 12 --save-plots figures/
-# Or use the installed CLI command:
-durr-hoyer-scale --max-n 12 --save-plots figures/
 
-# View interactive figures directly
-python demo.py --plot
-python scaling.py --plot
-
-# Generate Markdown scaling and comparison tables directly
-python scaling.py --max-n 12 --markdown
-
-# Run test suite with coverage
-pytest --cov=closest_search --cov-report=term-missing tests/
+# Run the test suite
+pytest tests/
 ```
 
 ---
 
 ## How It Works
 
-### 1. The Computed Oracle Pipeline (O(poly(log N)) gates, n + 2m + 1 qubits for m > 1)
+### 1. The Computed Oracle Pipeline
 
 ![Computed Quantum Distance Oracle Pipeline](figures/oracle_pipeline.png)
-Figure 1: Architectural schematic of the computed quantum distance oracle pipeline, showing register allocation across 5 quantum registers, coherent arithmetic stages (`QuadraticForm`, Draper constant adder, absolute value), integer comparator, single-qubit phase kick, and exact uncomputation.
+*Figure 1: Pipeline for the computed distance oracle showing register allocation across 5 quantum registers, arithmetic stages, comparator, phase kick, and uncomputation.*
 
-1. **Value Function** — `QuadraticForm` computes $|i\rangle|0\rangle \to |i\rangle|f(i)\rangle$ via QFT phase arithmetic in $O(n^2 m)$ gates. Coefficients are explicitly reduced mod $2^m$.
-2. **Subtract Target** — Draper QFT constant adder adds $-t$ to the $(m+1)$-bit `(val, sign)` register.
-3. **Absolute Value** — Controlled on the sign bit, two's-complement negates lower $m$ bits to yield $|f(i) - t|$.
-4. **Comparator & Phase Kick** — `IntegerComparator` (using $m-1$ clean ancillas) sets `flag` iff $|f(i) - t| < \text{threshold}$, and a `Z` gate flips the phase.
-5. **Uncomputation** — Exact reverse sequence returns all ancilla/value registers to $|0\rangle$, leaving only phase-marked index states.
+The distance oracle maps $|i\rangle \to (-1)^{[|f(i)-t| < \text{threshold}]} |i\rangle$ in $\mathcal{O}(\text{poly}(n, m))$ gates using $n + 2m + 1$ qubits (for $m > 1$):
 
-### 2. The "Quadratic Sweet Spot" vs. General Function Classes
+1. **Value Evaluation:** `QuadraticForm` evaluates $|i\rangle|0\rangle \to |i\rangle|f(i)\rangle$ via QFT phase arithmetic in $\mathcal{O}(n^2 m)$ gates.
+2. **Target Subtraction:** A Draper QFT constant adder computes $f(i) - t$ in $(m+1)$-bit two's complement on the `(val, sign)` register.
+3. **Absolute Value:** Controlled on the sign bit, two's complement negation yields $|f(i) - t|$.
+4. **Comparison & Phase Kick:** `IntegerComparator` flags whether $|f(i) - t| < \text{threshold}$, and a `Z` gate applies the phase flip.
+5. **Uncomputation:** The arithmetic steps are reversed in exact reverse order to return all scratch registers to $|0\rangle$.
 
-Why is coherent arithmetic so clean for $f(i) = (a i^2 + b i + c) \pmod{2^m}$?
+### 2. The Quadratic Case vs. General Functions
 
-1. **The Quadratic Sweet Spot (Carry-Free QFT Phase Coupling):**
-   Decomposing the index integer $i$ into binary bits $x_j \in \{0, 1\}$ expands the arithmetic directly into pairwise bit products:
+Quadratic polynomials $f(i) = (a i^2 + b i + c) \bmod 2^m$ represent a uniquely favorable case for coherent arithmetic:
 
-   $$i = \sum_{j=0}^{n-1} 2^j x_j \implies a i^2 = \sum_{j,k} a \cdot 2^{j+k} x_j x_k, \qquad b i = \sum_j b \cdot 2^j x_j$$
+* **Carry-free phase coupling:** Expanding the index bits $i = \sum_{j=0}^{n-1} 2^j x_j$ shows that $i^2 = \sum_{j,k} 2^{j+k} x_j x_k$. Because quadratic terms depend only on pairwise bit products $x_j x_k$, they map directly to 2-qubit controlled-phase rotations in QFT space without carry propagation or Toffoli multiplier trees.
+* **Higher-degree and non-polynomial functions:** Cubics ($i^3$), divisions ($1/x$), or cryptographic primitives (SHA-256, AES) require full reversible carry-propagation adders and Wallace-tree multipliers with $\mathcal{O}(m^2)$ Toffoli gates and additional ancilla qubits.
+* **Why QROM is common in practice:** For applications lacking clean algebraic structure (such as loading arbitrary molecular Hamiltonian coefficients in quantum chemistry), optimized QROM with unary iteration remains standard despite the $\mathcal{O}(N)$ gate scaling.
 
-   Because quadratic terms depend only on pairwise bit products $x_j x_k$, they map directly to 2-qubit controlled-phase rotations in QFT space. This requires **zero carry ancillas** and **zero Toffoli multiplier trees**.
-2. **General Function Classes (Cubics, Divisions, Hashes):**
-   For higher-degree polynomials like $i^3$, non-polynomial functions (such as reciprocals $1/x$ or square roots), or cryptographic hash primitives (SHA-256, AES S-boxes), QFT phase arithmetic no longer applies without full reversible carry-propagation adder/multiplier networks (e.g. Cuccaro adders, Wallace-tree multipliers), requiring $O(m^2)$ Toffoli gates and substantial dirty/clean ancilla registers.
-3. **Why QROM Dominates in Real-World Applications:**
-   In quantum chemistry (loading molecular Hamiltonian orbital coefficients; Babbush et al. 2018, Lee et al. 2021) and practical cryptanalysis, values $f(i)$ lack clean algebraic quadratic structure. For practical problem sizes with $N \le 10^5$, optimized QROM with unary iteration and select-swap networks remains the industry standard.
+### 3. The Dürr–Høyer Search Loop
 
-### 3. The Search Loop (Dürr–Høyer + BBHT)
+Because the number of marked items is unknown and changes as the threshold decreases, the algorithm uses the Boyer–Brassard–Høyer–Tapp (BBHT) adaptive schedule:
 
-Since the number of marked items is unknown and changes dynamically as the threshold tightens:
-1. Sample a random index $i_0$, set $\text{threshold} = |f(i_0) - t|$.
-2. Run Grover search using the BBHT exponential schedule with parameter $m_{\text{BBHT}} \to \min((6/5) m_{\text{BBHT}}, \sqrt{N})$.
-3. Measure an index $i'$ and verify classically. If $|f(i')-t| < \text{threshold}$, adopt it as the new threshold and reset the schedule.
-4. Stop at distance 0 or when the query budget of $\approx 15\sqrt{N}$ is spent.
+1. Sample an initial random index $i_0$ and set $\text{threshold} = |f(i_0) - t|$.
+2. Run Grover search with schedule parameter $m_{\text{BBHT}} \leftarrow \min((6/5) m_{\text{BBHT}}, \sqrt{N})$.
+3. Measure an index $i'$ and verify classically. If $|f(i') - t| < \text{threshold}$, update the threshold and reset the schedule.
+4. Terminate when distance 0 is found or the total query budget of $\approx 11.25\sqrt{N}$ is exhausted.
 
 ![Dürr–Høyer Search Trajectory](figures/durr_hoyer_trajectory.png)
-Figure 2: Left: Search space landscape $|f(i)-t|$ across candidate indices $i$ with the global minimum marked. Right: Dürr–Høyer dynamic threshold ladder stepping down round-by-round until isolating the optimal solution.
+*Figure 2: Left: Search space landscape $|f(i)-t|$ with global minimum marked. Right: Dynamic threshold ladder stepping down round-by-round.*
 
 ![Grover Amplitude Amplification](figures/grover_amplitudes.png)
-Figure 3: Showcase measurement distribution after threshold discovery, comparing amplified probability on the closest set (>94%) against the initial uniform superposition ($1/N = 12.5\%$).
+*Figure 3: Measurement probabilities after threshold discovery, comparing amplified probability on the closest set (>94%) against the uniform state ($1/N = 12.5\%$).*
 
 ---
 
-## Algorithmic Scaling & Complexity Analysis
+## Scaling & Complexity Analysis
 
-### The White-Box vs. Black-Box Paradox & Classical Baselines
+### White-Box vs. Black-Box and Classical Baselines
 
-A central concept in quantum algorithm analysis is the distinction between white-box and black-box access:
+When analyzing quantum search speedups, access assumptions matter:
 
-1. **Black-Box Model:** Assumes an opaque $\Theta(N)$ oracle where classical search requires evaluating all $N = 2^n$ indices.
-2. **White-Box Model:** When $f(i) = (Ai^2+Bi+C) \bmod 2^m$ is explicitly known (which is necessary to construct a circuit in $O(\text{poly}(\log N))$ gates), classical algorithms are not restricted to exhaustive scanning. They exploit modular periodicity:
-   - **Periodicity:** $f(i + 2^m) \equiv f(i) \pmod{2^m}$. For $N > 2^m$, evaluating $2^m$ indices covers all unique function outputs, capping classical evaluations at $\min(N, 2^m)$.
-   - **Algebraic Solvers:** Exact modular congruences $f(i) \equiv t \pmod{2^m}$ can be solved even faster in $O(\text{poly}(m))$ using 2-adic / Hensel root-finding.
+1. **Black-Box Model:** Assumes an opaque oracle where classical search requires exhaustive scanning over all $N = 2^n$ candidates.
+2. **White-Box Model:** When $f(i) = (a i^2 + b i + c) \bmod 2^m$ is explicitly known (necessary to build the circuit in $\mathcal{O}(\text{poly}(\log N))$ gates), classical solvers can exploit structure:
+   * **Periodicity:** $f(i + 2^m) \equiv f(i) \pmod{2^m}$. For $N > 2^m$, evaluating $2^m$ candidates covers all unique values, bounding classical checks at $\min(N, 2^m)$.
+   * **Algebraic Solvers:** Exact congruences $f(i) \equiv t \pmod{2^m}$ can be solved directly in $\mathcal{O}(\text{poly}(m))$ using 2-adic / Hensel lifting.
 
-This project implements both classical baselines (`classical_closest` for black-box and `classical_structured_closest` for period-reduction solving) to demonstrate how white-box structure changes the classical complexity.
+We implement both classical baselines (`classical_closest` for black-box and `classical_structured_closest` for period reduction) in [closest_search/search.py](closest_search/search.py).
 
-`python scaling.py --max-n 12` evaluates gate scaling across distinct regimes:
+### Regime 1: Unstructured Index Space ($m = n + 1, N \le 2^m$)
 
-### Regime 1: Unstructured Index Space (m = n + 1, N ≤ 2ᵐ)
-
-Gate scaling across index qubits $n$ for $f(i) = (2i^2 + 3i + 1) \bmod 2^{n+1}$ with target $t=6$, threshold $1$ (exact unique target $k=1$). Compares transpiled NISQ gates under both Single-Run Grover and Dürr–Høyer minimum finding against classical models:
+Here we benchmark scaling for $f(i) = (2i^2 + 3i + 1) \bmod 2^{n+1}$ with target $t=6$ and threshold $1$ ($k=1$ unique marked item).
 
 ![NISQ Gate Complexity Scaling](figures/nisq_scaling.png)
-Figure 4: Log-log scaling of transpiled elementary NISQ gates in basis $\{u, cx\}$ for Single-Run Grover and Dürr–Høyer search (scaling as $\sim \sqrt{N}\,\text{polylog}(N)$) vs. classical black-box bit operations ($\sim N\,\text{polylog}(N)$) and CPU instructions ($\sim N$).
+*Figure 4: Scaling of transpiled NISQ gates (basis $\{u, cx\}$) for Single-Run Grover and Dürr–Høyer search vs. classical bit operations and CPU instructions.*
 
-> [!IMPORTANT]
-> **Unit Mismatch & Gate Complexity Framing:**
-> - **Algorithmic Scaling vs. Physical Runtime:** Comparing transpiled elementary NISQ gates in basis $\{u, cx\}$ against classical bit/word operations illustrates algorithmic scaling, *not* physical runtime speedup (a 2-qubit quantum gate cycle is orders of magnitude slower than a 64-bit CPU instruction).
-> - **Query vs. Gate Complexity:** Quantum search guarantees $\mathcal{O}(\sqrt{N})$ *queries*, but total gate complexity is $\mathcal{O}(\sqrt{N}\,\text{polylog}(N))$ ($\mathcal{O}(\sqrt{N} \log^3 N)$ for quadratic arithmetic). At $n \le 12$, oracle gate growth inflates the empirical log-log slope to $\approx 1.0$ (matching the CPU slope), though it genuinely outpaces classical bit-level operations ($\text{slope} \approx 1.43$).
+**Note on units and empirical slopes:**
+Comparing quantum gates to classical instructions illustrates algorithmic complexity, not wall-clock speedup (a 2-qubit gate cycle is much slower than a CPU instruction). While Grover achieves $\mathcal{O}(\sqrt{N})$ query complexity, total gate complexity is $\mathcal{O}(\sqrt{N} \log^3 N)$. At $n \le 12$, the polylogarithmic growth of the arithmetic oracle makes the empirical quantum gate slope $\approx 1.0$ (close to the CPU instruction slope), but it clearly outperforms classical bit-level operations (slope $\approx 1.43$).
 
 <details>
-<summary><b>📊 View Full Regime 1 Gate Scaling Data Table (n = 2 to 12, N ≤ 4,096)</b></summary>
+<summary>Gate scaling data table (n = 2 to 12)</summary>
 
 | $n$ | $m$ | $N=2^n$ | Q-Oracle (CNOTs) | Q-Iter Gates | Single-Run Q-Gates (Optimal $R$) | Dürr–Høyer Q-Gates (11.25√N + 0.7log²N) | C-BlackBox Bit-Ops | C-BlackBox CPU-Ops |
 | --: | --: | ------: | ----------------: | -----------: | --------------------------------: | ---------------------------------------: | -----------------: | ------------------: |
@@ -142,21 +120,21 @@ Figure 4: Log-log scaling of transpiled elementary NISQ gates in basis $\{u, cx\
 | 11 | 12 | 2,048 | 11,536 (5,996) | 12,533 | 438,655 | 7,442,307 | 542,720 | 6,144 |
 | 12 | 13 | 4,096 | 14,095 (7,414) | 15,330 | 766,500 | 12,582,864 | 1,282,048 | 12,288 |
 
-*Notes on accounting & empirical slopes:*
-- **Empirical Log-Log Slopes ($n \le 12$):** Single-Run Grover gates: slope $\approx 1.005$ ($\sim N^{1.00}$); Dürr–Høyer gates: slope $\approx 0.964$ ($\sim N^{0.96}$); Classical bit-ops: slope $\approx 1.434$ ($\sim N \log^2 N$); Classical CPU-ops: slope $\approx 1.000$ ($\sim 3N$). The logarithmic growth of the arithmetic oracle accounts for the $\approx 1.0$ empirical slope at small $N$.
-- **Single-Run Grover:** Ideal single-run using exact discrete candidate evaluation $R = \arg\max_R \sin^2((2R+1)\arcsin\sqrt{k/N})$ over integers neighboring $R^* = (\pi - \theta)/(2\theta)$ with $\theta = 2\arcsin\sqrt{k/N}$, correctly yielding $R=1$ at $N=4, k=1$ and $R=0$ when $k > N/2$ without destructive over-rotation.
-- **Dürr–Høyer (1996) Gate Envelope:** Proven expected total query complexity $(45/4)\sqrt{N} + 0.7\log_2^2 N$ function evaluation calls across randomized rounds (Grover search queries + classical candidate verifications). Gate total models an all-quantum query execution upper bound: $E[Q_{\text{quant}}] \times G_{\text{iter}}$.
-- **Classical CPU-Ops:** Modern word-RAM CPU evaluates $(A \cdot i^2 + B \cdot i + C) \bmod 2^m$ in $\approx 3$ CPU instructions.
-- **Classical Bit-Ops:** Software bit-level gate model: $n^2 + nm + m$ bit operations.
+*Table notes:*
+* **Empirical slopes ($n \le 12$):** Single-Run Grover $\sim N^{1.00}$; Dürr–Høyer $\sim N^{0.96}$; Classical bit-ops $\sim N \log^2 N$; Classical CPU-ops $\sim 3N$.
+* **Single-Run Grover:** Uses exact optimal rotation count $R = \arg\max_R \sin^2((2R+1)\arcsin\sqrt{k/N})$.
+* **Dürr–Høyer Bound:** Evaluated at expected query count $(45/4)\sqrt{N} + 0.7\log_2^2 N$.
+* **Classical CPU-Ops:** Evaluates $(a \cdot i^2 + b \cdot i + c) \bmod 2^m$ in $\approx 3$ word instructions.
+* **Classical Bit-Ops:** Standard software bit-level gate model: $n^2 + nm + m$ operations.
 
 </details>
 
-### Regime 2: Periodic Index Space (Fixed m = 4, n > m)
+### Regime 2: Periodic Index Space (Fixed $m = 4, n > m$)
 
-When $N > 2^m$, modular periodicity $f(i + 2^m) \equiv f(i) \pmod{2^m}$ caps classical evaluations at $2^m = 16$.
+When $N > 2^m$, periodicity $f(i + 2^m) \equiv f(i) \pmod{2^m}$ caps classical evaluations at $2^m = 16$.
 
 <details>
-<summary><b>📊 View Periodic Index Space Scaling Data Table (Fixed m = 4, n = 4 to 8)</b></summary>
+<summary>Periodic scaling data table (m = 4, n = 4 to 8)</summary>
 
 | $n$ | $m$ | $N=2^n$ | $2^m$ | C-BlackBox Evals | C-Struct Evals | C-BlackBox Ops | C-Struct Ops |
 | --: | --: | ------: | ----: | ---------------: | -------------: | -------------: | -----------: |
@@ -168,20 +146,17 @@ When $N > 2^m$, modular periodicity $f(i + 2^m) \equiv f(i) \pmod{2^m}$ caps cla
 
 </details>
 
-### Empirical QROM vs. Computed Oracle Comparison (n ≤ 6)
+### Empirical QROM vs. Computed Arithmetic ($n \le 6$)
 
-Direct gate-level comparison between an explicit value-loading QROM oracle ($|i\rangle|0\rangle \to |i\rangle|f(i)\rangle$, optimized with Gray-code multi-controlled $X$ traversal) and the coherent arithmetic oracle (`QuadraticForm`), both transpiled to elementary basis $\{u, cx\}$ under `optimization_level=1, seed_transpiler=42` using the identical subtraction, absolute value, and comparator pipeline:
+We compare an explicit value-loading QROM oracle (optimized with Gray-code multi-controlled $X$ transitions) against the coherent `QuadraticForm` oracle, transpiled to basis $\{u, cx\}$ with `optimization_level=1`:
 
 ![Empirical QROM vs Computed Oracle](figures/qrom_vs_coherent_nisq.png)
-Figure 5: Left: Transpiled gate counts in basis $\{u, cx\}$ for Gray-code tabular QROM vs. coherent QuadraticForm arithmetic. Right: QROM gate overhead multiplier ($11.38\times$ at $N=64$).
+*Figure 5: Left: Transpiled gate counts for Gray-code QROM vs. coherent arithmetic. Right: QROM gate overhead multiplier ($11.38\times$ at $N=64$).*
 
-Gray-code traversal with $g_k = k \oplus (k \gg 1)$ eliminates multi-qubit $X$ decoding sweeps, flipping only 1 index qubit per transition. While coherent QFT phase arithmetic scales as $O(n^2 m)$, tabular QROM scales as $\Theta(m \cdot 2^n)$, requiring **1.56× more gates** at $n=3$ ($N=8$), **3.09× more gates** at $n=4$ ($N=16$), and **11.38× more gates** at $n=6$ ($N=64$).
-
-> [!NOTE]
-> **Metric Inversion Preview:** While Gray-code QROM suffers exponential gate explosion under NISQ ($11.38\times$ more gates at $N=64$), this advantage completely inverts in Fault-Tolerant regimes where continuous rotation distillation heavily penalizes coherent arithmetic (see [Fault-Tolerant Scaling](#fault-tolerant-ftqc-cliffordt-resource-scaling-proxy--crossover)).
+While coherent QFT arithmetic scales as $\mathcal{O}(n^2 m)$, tabular QROM scales as $\Theta(m \cdot 2^n)$, requiring **1.56× more gates** at $n=3$ ($N=8$), **3.09×** at $n=4$ ($N=16$), and **11.38×** at $n=6$ ($N=64$).
 
 <details>
-<summary><b>📊 View Empirical QROM vs Computed Gate Count Data Table (n = 2 to 6)</b></summary>
+<summary>QROM vs Computed gate count table (n = 2 to 6)</summary>
 
 | $n$ | $m$ | $N=2^n$ | QROM Oracle Gates | Computed Oracle Gates | Ratio (QROM / Computed) |
 | --: | --: | ------: | -----------------: | --------------------: | -----------------------: |
@@ -195,36 +170,28 @@ Gray-code traversal with $g_k = k \oplus (k \gg 1)$ eliminates multi-qubit $X$ d
 
 ---
 
-## Fault-Tolerant (FTQC) Clifford+T Resource Scaling Proxy & Crossover
+## Fault-Tolerant (Clifford+T) Scaling & Crossover
 
-In fault-tolerant quantum computing (FTQC), arbitrary single-qubit rotations (such as QFT phase angles) are not native gates. They must be synthesized into sequences of Clifford+T gates via magic state distillation factories (Ross & Selinger 2016, *Phys. Rev. A* 94, 012327). In contrast, discrete logical operations (like multi-controlled X / Toffoli gates in QROM lookup trees) decompose directly into discrete Clifford+T primitives without continuous rotation synthesis error ($\varepsilon = 0$).
+In fault-tolerant quantum computing (FTQC), arbitrary continuous rotations (such as QFT phase angles) must be synthesized via magic state distillation factories (Ross & Selinger 2016). Discrete operations like Toffolis in QROM lookup trees decompose directly into discrete Clifford+T gates without rotation synthesis error ($\varepsilon = 0$).
 
-### 1. Architectural Pipeline Separation
+### 1. Pipeline Breakdown
 
-The complete search oracle decomposes into two independent stages:
-
-| Stage | Sub-Circuits | FTQC Compilation Primitives |
+| Stage | Circuit | Compilation Model |
 | :--- | :--- | :--- |
-| **Value Loader** (Coherent) | `QuadraticForm` | QFT phase coupling: $K_{\text{total}} = 12nm + 7n(n-1)m + 6m(m-1)$ rotations synthesized to error $\varepsilon / K_{\text{total}}$ (unassisted, or $4 R_z$ per $CCPhase$ with 1 clean ancilla). |
-| **Value Loader** (QROM) | Unary Iteration Table (Babbush 2018) | Discrete binary selection tree: $N-1$ Toffolis ($4T$ each via measurement-assisted synthesis). Reversible uncomputation yields exactly $8(N-1)$ $T$ gates with $\varepsilon = 0$, independent of $m$. |
-| **Common Downstream Pipeline** | `add_constant(-t)`, `absolute_value`, `IntegerComparator`, `Z(flag)` | Draper adder + two's complement absolute value with $K_{\text{downstream}} = 12m^2+8m+2$ $R_z$ rotations plus ripple-carry comparator with $16(m-1)$ $T$ gates. Shared identically by both loader architectures. |
+| **Value Loader (Coherent)** | `QuadraticForm` | QFT phase coupling: $K_{\text{total}} = 12nm + 7n(n-1)m + 6m(m-1)$ rotations synthesized to precision $\varepsilon / K_{\text{total}}$. |
+| **Value Loader (QROM)** | Unary Iteration (Babbush 2018) | Binary selection tree: $N-1$ Toffolis ($4T$ each with measurement assistance). Reversible uncomputation costs $8(N-1)$ $T$-gates with $\varepsilon = 0$. |
+| **Downstream Pipeline** | Subtraction, Absolute Value, Comparator | Draper adder + absolute value with $K_{\text{downstream}} = 12m^2+8m+2$ rotations plus ripple-carry comparator with $16(m-1)$ $T$-gates. |
 
 <details>
-<summary><b>📐 View Mathematical Rotation Decomposition & Clifford+T Synthesis Model</b></summary>
+<summary>Mathematical details: rotation decomposition & Clifford+T synthesis</summary>
 
-1. **Rotation Synthesis Proxy (Ross & Selinger 2016):** An arbitrary single-qubit Z-rotation $R_z(\theta)$ synthesized to precision $\varepsilon_{\text{rot}} = \varepsilon / K$ requires approximately:
+1. **Rotation Synthesis (Ross & Selinger 2016):** An arbitrary single-qubit Z-rotation $R_z(\theta)$ synthesized to precision $\varepsilon_{\text{rot}} = \varepsilon / K$ requires approximately:
 
    $$T(R_z, \varepsilon_{\text{rot}}) \approx \left\lceil 3 \log_2\left(\frac{K}{\varepsilon}\right) \right\rceil$$
 
-2. **Coherent Arithmetic Loader (`QuadraticForm`):** Decomposes into:
-   - Linear terms: $nm$ controlled-phase $CP$ gates costing $3 R_z$ each, totaling $3nm R_z$ rotations.
-   - Diagonal quadratic terms where $j = k$: $nm$ controlled-phase $CP$ gates costing $3 R_z$ each, totaling $3nm R_z$ rotations. *(Note: In binary arithmetic $x_j^2 = x_j$, so compilers merge linear and diagonal terms into $nm$ gates; this unmerged closed form provides a clean, conservative analytical proxy).*
-   - Off-diagonal quadratic terms where $j < k$: $\frac{1}{2}n(n-1)m$ doubly-controlled phase $CCPhase$ gates, requiring $7 R_z$ each unassisted ($\frac{7}{2}n(n-1)m R_z$ rotations) or $4 R_z$ with 1 clean ancilla ($2n(n-1)m R_z$ rotations).
-   - Result register QFT/IQFT: $m(m-1)$ controlled-phase $CP$ gates costing $3 R_z$ each, yielding $3m(m-1) R_z$ rotations.
+2. **Coherent Arithmetic Loader:** Decomposes into $nm$ controlled-phase gates for linear terms, $nm$ for diagonal terms, $\frac{1}{2}n(n-1)m$ doubly-controlled phase gates for off-diagonal terms, and $m(m-1)$ rotations for the register QFT. With compute and uncompute ($2\times$):
 
-   Accounting for forward compute and uncompute ($2\times$ factor), total non-Clifford rotations:
-
-   $$K_{\text{total}} = 12nm + 7n(n-1)m + 6m(m-1) \quad (\text{unassisted}), \quad 12nm + 4n(n-1)m + 6m(m-1) \quad (\text{ancilla-assisted})$$
+   $$K_{\text{total}} = 12nm + 7n(n-1)m + 6m(m-1)$$
 
    $$T_{\text{coherent}}(n, m, \varepsilon) = K_{\text{total}} \cdot \left\lceil 3 \log_2\left(\frac{K_{\text{total}}}{\varepsilon}\right) \right\rceil$$
 
@@ -234,15 +201,15 @@ The complete search oracle decomposes into two independent stages:
 
 </details>
 
-### 2. Dual Fault-Tolerant Resource Comparison: Continuous QFT vs. Optimal QROM
+### 2. Continuous QFT vs. Discrete QROM Crossover
 
 ![Fault-Tolerant Clifford+T Crossover](figures/ftqc_crossover.png)
-Figure 6: Log-log comparison of analytical Clifford+T gate cost proxies for optimal discrete QROM (Babbush et al. 2018 unary iteration, $8(N-1)$ $T$-gates) vs. continuous-phase QuadraticForm arithmetic across synthesis precision budgets $\varepsilon$, illustrating the continuous rotation synthesis crossover band at $N \approx 10^6 \text{ to } 2 \times 10^6$.
+*Figure 6: Clifford+T gate cost for optimal discrete QROM ($8(N-1)$ T-gates) vs. continuous-phase QuadraticForm arithmetic across synthesis precision budgets $\varepsilon$, showing the crossover around $N \approx 10^6$.*
 
 <details>
-<summary><b>📊 View Regime 3A: Fault-Tolerant Value Loader Comparison Table (T_load, n = 2 to 20)</b></summary>
+<summary>Fault-tolerant value loader comparison table (T-count, n = 2 to 20)</summary>
 
-Evaluating `python scaling.py --max-n 12 --markdown` isolates the **Value Loader stage** ($T_{\text{load}}$) between the discrete selection tree QROM loader ($8(N-1)$ $T$-gates, $\varepsilon=0$, Babbush et al. 2018 unary iteration) and the coherent arithmetic loader (`QuadraticForm`, modeled via Ross & Selinger 2016 gridsynth proxy with $CP \to 3 R_z$ and $CCPhase \to 7 R_z$ rotations) across synthesis error budgets $\varepsilon \in \{10^{-4}, 10^{-6}, 10^{-8}, 10^{-10}\}$:
+Evaluating `python scaling.py --max-n 12 --markdown` isolates the **Value Loader stage** ($T_{\text{load}}$):
 
 | $n$ | $m$ | $N=2^n$ | QROM Loader $T$ ($8(N-1)$) | Coherent Loader $T$ ($\varepsilon=10^{-4}$) | Coherent Loader $T$ ($\varepsilon=10^{-6}$) | Coherent Loader $T$ ($\varepsilon=10^{-8}$) | Coherent Loader $T$ ($\varepsilon=10^{-10}$) | Loader Ratio ($\varepsilon=10^{-6}$) |
 | --: | --: | ------: | -------------------------: | -------------------------------------------: | -------------------------------------------: | -------------------------------------------: | --------------------------------------------: | -------------------------------------: |
@@ -262,9 +229,9 @@ Evaluating `python scaling.py --max-n 12 --markdown` isolates the **Value Loader
 </details>
 
 <details>
-<summary><b>📊 View Regime 3B: Fault-Tolerant Full Distance Oracle Comparison Table (T_oracle, n = 2 to 20)</b></summary>
+<summary>Fault-tolerant full distance oracle comparison table (T-count, n = 2 to 20)</summary>
 
-Fault-tolerant Clifford+T cost comparison for the **complete Distance Oracle** (Value Loader + Draper Subtraction + Absolute Value + Comparator + Phase Kick + Uncomputation), allocating error budget $\varepsilon_{\text{stage}} = \varepsilon / 2$ equally between value loading and downstream arithmetic:
+Clifford+T cost for the complete distance oracle (loader + subtraction + absolute value + comparator + phase kick + uncomputation):
 
 | $n$ | $m$ | $N=2^n$ | QROM Full Oracle $T$ ($\varepsilon=10^{-6}$) | Coh Full Oracle $T$ ($\varepsilon=10^{-4}$) | Coh Full Oracle $T$ ($\varepsilon=10^{-6}$) | Coh Full Oracle $T$ ($\varepsilon=10^{-8}$) | Coh Full Oracle $T$ ($\varepsilon=10^{-10}$) | Oracle Ratio ($\varepsilon=10^{-6}$) |
 | --: | --: | ------: | -------------------------------------------: | ------------------------------------------: | ------------------------------------------: | ------------------------------------------: | -------------------------------------------: | -------------------------------------: |
@@ -283,34 +250,23 @@ Fault-tolerant Clifford+T cost comparison for the **complete Distance Oracle** (
 
 </details>
 
-### 3. Key Fault-Tolerant Insights & Methodology Context
+### 3. Practical Notes on Fault-Tolerant Compilation
 
-1. **The Fault-Tolerant Metric Inversion ($N \le 10^5$):**
-   Under raw NISQ gate counts, coherent arithmetic appears cheaper because continuous phase gates $CP(\theta)$ count as single unit gates. In FTQC, continuous rotations in `QuadraticForm` require expensive magic state distillation ($\approx 60\text{--}150$ $T$ gates each), whereas discrete Toffolis require only $4T$ gates with zero synthesis error ($\varepsilon = 0$). Consequently, QROM is dramatically cheaper at small-to-medium problem sizes across all table architectures.
-2. **Crossover Sensitivity to Compilation Pairings ($N \approx 10^3 \text{ vs. } 10^6$):**
-   The $N \approx 10^6$ crossover in Figure 6 reflects the asymmetric pairing of theoretical best-case unary iteration QROM ($8(N-1)$ $T$-gates) against unmerged continuous QFT rotation synthesis. In contrast, compiling the repo's Gray-code table or using discrete reversible arithmetic (e.g., Toffoli adders with $\mathcal{O}(n^2)$ $T$-gates) places the crossover near $N \approx 10^3$.
-3. **Analytical Gridsynth Proxy Assumptions:**
-   Treating all rotations in `QuadraticForm` as arbitrary continuous angles provides a conservative upper bound. Compiling exact dyadic angles ($CZ, CS, T$) with $0\text{--}1$ $T$ gate and merging diagonal terms ($x_j^2 = x_j$) further reduces continuous coherent $T$-counts.
-4. **Toffoli Synthesis Model:**
-   QROM Toffoli accounting ($4T$ compute, $8T$ reversible uncompute) models measurement-assisted / catalyst state distillation (Jones 2013, Gidney 2018); standard unitary Clifford+$T$ Toffolis cost $7T$ each.
+* **Metric Inversion at Small to Medium $N$:** In NISQ gate counts, coherent arithmetic looks consistently cheaper because continuous phase rotations are treated as single unit gates. In fault-tolerant regimes, each continuous rotation requires expensive magic state distillation ($\approx 60\text{--}150$ $T$-gates), whereas discrete Toffolis require only $4T$ gates. This makes QROM significantly cheaper for $N \le 10^5$.
+* **Crossover Sensitivity:** The $N \approx 10^6$ crossover in Figure 6 compares theoretical best-case unary iteration QROM ($8(N-1)$ $T$-gates) against unmerged continuous QFT rotation synthesis. Compiling discrete reversible arithmetic (e.g., Toffoli-based adders with $\mathcal{O}(n^2)$ $T$-gates) shifts the crossover down near $N \approx 10^3$.
+* **Conservative Gridsynth Proxy:** Treating all rotations in `QuadraticForm` as arbitrary angles provides an upper bound. Merging diagonal terms ($x_j^2 = x_j$) and compiling exact dyadic angles ($CZ, CS, T$) directly further reduces coherent $T$-counts.
 
 ---
 
-## Codebase Architecture
+## Codebase Overview
 
 | File | Description |
 | :--- | :--- |
-| `closest_search/circuits.py` | Quantum circuit builders (`value_function`, `add_constant`, `absolute_value`, `distance_oracle`, `qrom_value_function`, `qrom_distance_oracle`, `diffuser`, `total_oracle_qubits`) |
-| `closest_search/ftqc.py` | Fault-tolerant Clifford+T cost proxies (`FTQCResourceVector`, discrete QROM vs. continuous rotation synthesis) and classical operation metrics |
-| `closest_search/nisq.py` | Centralized NISQ complexity computation records, exact Grover iteration formula, and scaling models for CLI tables and figures |
-| `closest_search/search.py` | Dürr–Høyer search driver, BBHT schedule, `closest_value_search` (with total qubit guard and circuit caching), `classical_closest`, `classical_structured_closest`, and `classical_algebraic_closest` |
-| `closest_search/plotting.py` | Seaborn & Matplotlib visualization suite for search trajectories, probability distributions, gate scaling, and FTQC crossovers (with sensitivity bands and precomputed record support) |
-| `demo.py` | Command-line demo displaying round evolution, dual classical baselines, showcase histogram, and figure generation (`--plot`, `--save-plots`) |
-| `scaling.py` | Gate scaling analysis across dual NISQ regimes, empirical QROM comparison, FTQC Clifford+T estimation, and scaling plots (`--plot`, `--save-plots`) |
-| `tests/test_closest_search.py` | Unit tests for circuit statevectors, QROM value loader/oracle, FTQC Clifford+T models, structured baseline, algebraic solver, and budget bounds |
-| `tests/test_readme_tables.py` | Automated reproducibility verification ensuring README markdown tables match locked environment computations |
-| `tests/test_plotting.py` | Unit tests for all Seaborn and Matplotlib visualization and figure generation routines |
-| `pyproject.toml` | PEP 621 Python package metadata, SPDX license, type marker configuration, and optional extras (`sim`, `plot`, `dev`, `all`) |
-| `CITATION.cff` | Open-source academic citation metadata |
-| `.github/workflows/ci.yml` | Automated GitHub Actions CI test matrix with least-privilege permissions, concurrency control, and job isolation |
-
+| `closest_search/circuits.py` | Quantum circuit builders for arithmetic and QROM oracles (`value_function`, `distance_oracle`, `diffuser`) |
+| `closest_search/ftqc.py` | Analytical Clifford+T cost models and resource proxies |
+| `closest_search/nisq.py` | NISQ complexity accounting, exact Grover rotation formulas, and scaling records |
+| `closest_search/search.py` | Dürr–Høyer search driver, BBHT schedule, and classical baselines |
+| `closest_search/plotting.py` | Matplotlib & Seaborn visualization routines |
+| `demo.py` | CLI demo for search progression, measurement distributions, and figure export |
+| `scaling.py` | Benchmark script for gate scaling, QROM comparison, and Clifford+T crossover analysis |
+| `tests/` | Unit tests for circuits, baseline solvers, FTQC models, plotting, and README table reproducibility |
