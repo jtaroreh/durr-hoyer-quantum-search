@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "durr-hoyer-quantum-search"
 version = "0.2.0"
-description = "Educational reference demo of Dürr–Høyer quantum search with a computed arithmetic oracle"
+description = "Dürr–Høyer quantum search in Qiskit with a computed arithmetic oracle"
 readme = "README.md"
 authors = [
     { name = "Joel Taroreh", email = "jtaroreh@users.noreply.github.com" }

@@ -3,15 +3,14 @@
 Demonstrates how a computed oracle's gate count scales as O(poly(n, m)) = O(poly(log N))
 rather than the O(N) gates required by a QROM lookup table.
 
-This script evaluates three key educational regimes:
+Evaluates gate and resource scaling across three regimes:
   1. Unstructured NISQ Regime (m = n + 1): Problem size N = 2^n with target proximity threshold
-     producing a verified unique marked state (k=1) across index width n. Demonstrates asymptotic
-     gate scaling vs. classical operation models across problem size N.
+     producing a unique marked state (k=1). Compares asymptotic gate scaling against classical models.
   2. Periodic NISQ Regime (fixed m = 4, n > m): N = 2^n > 2^m where modular periodicity
      f(i + 2^m) = f(i) mod 2^m allows a period-aware classical solver to evaluate only 2^m states.
   3. Fault-Tolerant Clifford+T Regime & Crossover Ranges: Evaluates analytical T-count scaling
-     proxies for discrete QROM (unary iteration, Babbush et al. 2018) vs. continuous rotation synthesis
-     (Ross & Selinger 2016 gridsynth) across synthesis error budgets eps in {10^-4, 10^-6, 10^-8, 10^-10}.
+     for discrete QROM (unary iteration, Babbush et al. 2018) vs. continuous rotation synthesis
+     (Ross & Selinger 2016) across synthesis error budgets eps in {10^-4, 10^-6, 10^-8, 10^-10}.
 
 Usage:
     python scaling.py [--max-n 12] [--markdown]
@@ -310,35 +309,35 @@ def main() -> None:
             )
 
     if args.markdown:
-        print("\n*Key Fault-Tolerant Insights & Model Caveats:*")
+        print("\n*Key Fault-Tolerant Insights & Model Notes:*")
         print("- **Dual-Table Reporting:** Table 3A isolates the Value Loader stage ($T_{\\text{load}}$) where architectural divergence occurs; Table 3B captures the complete Distance Oracle ($T_{\\text{oracle}}$).")
-        print("- **Analytical Teaching Proxy & Non-Clifford Gate Accounting:** Coherent rotations model an analytical proxy charging 3 $R_z$ per $CP$ and 7 $R_z$ per $CCPhase$ (unassisted), giving $K_{\\text{total}} = 12nm + 7n(n-1)m + 6m(m-1)$. Note that in binary, $x_j^2 = x_j$, so Qiskit's `QuadraticFormGate` merges diagonal quadratic terms with linear terms into $nm$ $CP$ gates; the unmerged closed form provides a clean, conservative analytical proxy for continuous rotation overhead.")
+        print("- **Non-Clifford Gate Accounting:** Coherent rotations charge 3 $R_z$ per $CP$ and 7 $R_z$ per $CCPhase$ (unassisted), giving $K_{\\text{total}} = 12nm + 7n(n-1)m + 6m(m-1)$. Note that in binary, $x_j^2 = x_j$, so Qiskit's `QuadraticFormGate` merges diagonal quadratic terms with linear terms into $nm$ $CP$ gates; the unmerged closed form provides a conservative estimate for continuous rotation overhead.")
         print("- **Small-N QROM Advantage:** For small-to-medium $N \\le 2^{19}$, QROM is **10× to 100× cheaper** in $T$-count because discrete Toffoli selection trees require zero continuous rotation synthesis, whereas coherent arithmetic synthesizes thousands of non-Clifford rotations.")
-        print("- **Analytical Gridsynth Proxy Status:** Coherent $T$-counts model an unvalidated closed-form proxy by treating all phase angles as arbitrary continuous $R_z$ rotations based on Ross-Selinger (2016) asymptotics. Exact low-order dyadic QFT/quadratic angles ($CZ, \\text{Controlled-}S, T$) do not require full $\\varepsilon$-synthesis; compiling exact dyadics or using 1 clean ancilla ($4 R_z$ per $CCPhase$) reduces coherent $T$-count and shifts the crossover leftward.")
+        print("- **Gridsynth Synthesis Assumptions:** Coherent $T$-counts model continuous $R_z$ rotations based on Ross-Selinger (2016) asymptotics. Exact low-order dyadic QFT/quadratic angles ($CZ, \\text{Controlled-}S, T$) do not require full $\\varepsilon$-synthesis; compiling exact dyadics or using 1 clean ancilla ($4 R_z$ per $CCPhase$) reduces coherent $T$-count and shifts the crossover leftward.")
         print("- **Continuous QFT vs. Discrete Reversible Arithmetic:** The crossover at $N \\approx 10^6$ is specific to continuous Draper QFT arithmetic. Compiling known polynomial functions via discrete reversible arithmetic (e.g. Toffoli-based adders/multipliers like Gidney adders) requires $\\mathcal{O}(n^2)$ Toffolis ($4T$ each) with $\\varepsilon = 0$, shifting the crossover against QROM to $N \\sim 10^2\\text{--}10^3$.")
         print("- **Toffoli Synthesis Model:** QROM Toffoli cost ($4T$ compute, $8T$ reversible) assumes measurement-assisted / catalyst decomposition (Jones 2013, Gidney 2018); standard unitary Clifford+$T$ Toffoli is $7T$.")
     else:
         print("-" * len(ft_full_header))
-        print("\n* Key Fault-Tolerant Insights & Model Caveats:")
+        print("\n* Key Fault-Tolerant Insights & Model Notes:")
         print("  - Dual-Table Scope: Table 3A reports T_load; Table 3B reports complete distance oracle T_oracle.")
-        print("  - Analytical Teaching Proxy: Coherent loader charges 3 Rz per CP and 7 Rz per CCPhase (K_total = 12nm + 7n(n-1)m + 6m(m-1)).")
+        print("  - Coherent Loader Accounting: Coherent loader charges 3 Rz per CP and 7 Rz per CCPhase (K_total = 12nm + 7n(n-1)m + 6m(m-1)).")
         print("  - Small-N QROM Advantage: For N <= 2^19, QROM is substantially cheaper because discrete Toffolis require 0 synthesis error.")
-        print("  - Analytical Proxy: Treating all non-Clifford rotations as arbitrary continuous R_z is a proxy upper bound;")
+        print("  - Synthesis Assumptions: Treating all non-Clifford rotations as arbitrary continuous R_z is an upper bound;")
         print("    exact dyadic QFT/quadratic angles (CZ, CS, T) or ancilla assistance would reduce coherent T-count.")
         print("  - Arithmetic Paradigm: Continuous Draper QFT yields crossover at N ~ 10^6; discrete Toffoli arithmetic shifts crossover to N ~ 10^2 - 10^3.")
         print("  - Toffoli Model: 4T Toffoli assumes measurement-assisted decomposition (Jones 2013, Gidney 2018).")
 
     if not args.markdown:
         print("\n" + "=" * 104)
-        print("PEDAGOGICAL & FAULT-TOLERANCE NOTES")
+        print("FAULT-TOLERANCE & MODELING NOTES")
         print("=" * 104)
-        print("1. Unit Mismatch Disclaimer:")
+        print("1. Unit Differences:")
         print("   Comparing transpiled NISQ gates ({u, cx}) against classical bit/word operations")
         print("   illustrates algorithmic scaling, NOT physical runtime speedup. Quantum gate")
         print("   cycles on NISQ/FTQC hardware are vastly slower than classical CPU clock cycles.")
         print("\n2. Fault-Tolerant (FTQC) Accounting:")
         print("   In fault-tolerant architectures, non-Clifford rotations require magic state distillation")
-        print("   and surface code QEC. We model T-factory synthesis costs via Ross-Selinger (2016) proxy")
+        print("   and surface code QEC. We model T-factory synthesis costs via Ross-Selinger (2016)")
         print("   and unary iteration Toffoli networks via Babbush et al. (2018).")
         print("=" * 104)
 

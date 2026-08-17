@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use or reference this pedagogical quantum search implementation, please cite it as below."
+message: "If you use or reference this software, please cite it as below."
 authors:
   - family-names: "Taroreh"
     given-names: "Joel"

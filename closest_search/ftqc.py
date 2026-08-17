@@ -1,28 +1,10 @@
-"""Fault-tolerant quantum computing (FTQC) cost models and classical operation baselines.
+"""Fault-tolerant Clifford+T cost models and classical operation baselines.
 
-Provides analytical Clifford+T resource proxies for:
-  - Discrete QROM lookup tables (Babbush et al. 2018, unary iteration)
-  - Continuous rotation synthesis (Ross & Selinger 2016, gridsynth) for QuadraticForm arithmetic
-  - Common downstream oracle stages (Draper adders, comparators, and phase kick)
+Provides analytical Clifford+T resource models for:
+  - Discrete QROM lookup tables (Babbush et al. 2018 unary iteration)
+  - Continuous rotation synthesis (Ross & Selinger 2016) for QuadraticForm arithmetic
+  - Downstream oracle stages (Draper adders, comparators, and phase kick)
   - Classical bit-operation baselines for polynomial evaluation
-
-Note on Pedagogical Model Scope & Crossover Caveats:
-  These models provide an unvalidated closed-form analytical teaching proxy based on
-  literature scaling (Ross & Selinger 2016 typical-case 3*log2(1/eps) asymptotic and Babbush
-  et al. 2018 unary iteration), not compiler-synthesized exact gate layouts from a tool
-  like gridsynth.
-
-  Key Model Assumptions & Practical Context:
-    1. Continuous Rotation Assumption: The coherent model treats all phase rotations as
-       arbitrary continuous angles requiring full epsilon-synthesis. In practice, exact
-       dyadic angles (CZ, CS, T) require 0 or 1 T gate, and binary algebraic merging
-       (x_j^2 = x_j) further reduces phase couplings.
-    2. Arithmetic Paradigm: The headline crossover at N ~ 10^6 is specific to continuous-phase
-       Draper QFT arithmetic. In practical FTQC, known classical polynomial functions are
-       typically implemented via discrete reversible arithmetic (e.g. Toffoli-based adders
-       and multipliers like Gidney's carry-ripple/lookahead adders) with zero rotation
-       synthesis error (eps = 0) and O(n^2) Toffolis (4T each), which shifts the crossover
-       against QROM from N ~ 10^6 down to N ~ 10^2 - 10^3.
 """
 
 from __future__ import annotations
@@ -92,13 +74,13 @@ def ftqc_coherent_loader_t_count(
 ) -> int:
     """Fault-tolerant T-count proxy for coherent QuadraticForm arithmetic loader.
 
-    Accounting & Decomposition Derivation (Analytical Teaching Proxy):
+    Decomposition and gate accounting:
       - In QuadraticForm phase coupling:
         * Linear terms: n * m controlled-phase (CP) gates -> 3 R_z rotations each = 3nm R_z.
         * Diagonal quadratic terms (j = k): n * m CP gates -> 3 R_z rotations each = 3nm R_z.
           (Note: In binary arithmetic x_j^2 = x_j, so compilers / QuadraticFormGate merge
-          linear and diagonal terms into nm CP gates. This unmerged proxy bills them separately
-          as a conservative analytical upper-bound proxy).
+          linear and diagonal terms into nm CP gates. This unmerged model bills them separately
+          as a conservative upper-bound estimate).
         * Off-diagonal quadratic terms (j < k): n(n-1)/2 * m doubly-controlled phase (CCPhase) gates.
           Under standard unassisted Clifford+T decomposition: 7 R_z rotations each = 7/2 * n(n-1)m R_z
           (or 4 R_z each with 1 clean ancilla).
@@ -109,10 +91,10 @@ def ftqc_coherent_loader_t_count(
           Ancilla-assisted (1 ancilla):
             K_total = 2 * [6nm + 2n(n-1)m + 3m(m-1)] = 12nm + 4n(n-1)m + 6m(m-1)
       - Each rotation is synthesized to precision eps_rot = eps / K_total via
-        optimal Ross-Selinger gridsynth proxy: ceil(3 * log2(K_total / eps)).
+        optimal Ross-Selinger synthesis scaling: ceil(3 * log2(K_total / eps)).
 
-    Sensitivity & Scenarios:
-      Treating all rotations as continuous arbitrary angles provides an unmerged analytical proxy.
+    Note:
+      Treating all rotations as continuous arbitrary angles provides an upper-bound estimate.
       Compiling low-order dyadic QFT/quadratic angles (CZ, CS, T) reduces continuous synthesis
       overhead and shifts the crossover point leftward. Discrete reversible arithmetic (e.g.
       Toffoli-based adders) avoids continuous rotation synthesis altogether.

@@ -252,7 +252,7 @@ Clifford+T cost for the complete distance oracle (loader + subtraction + absolut
 
 ### 3. Practical Notes on Fault-Tolerant Compilation
 
-* **Metric Inversion at Small to Medium $N$:** In NISQ gate counts, coherent arithmetic looks consistently cheaper because continuous phase rotations are treated as single unit gates. In fault-tolerant regimes, each continuous rotation requires expensive magic state distillation ($\approx 60\text{--}150$ $T$-gates), whereas discrete Toffolis require only $4T$ gates. This makes QROM significantly cheaper for $N \le 10^5$.
+* **NISQ vs. FTQC Scaling:** In NISQ gate counts, coherent arithmetic looks consistently cheaper because continuous phase rotations are treated as single unit gates. In fault-tolerant regimes, each continuous rotation requires expensive magic state distillation ($\approx 60\text{--}150$ $T$-gates), whereas discrete Toffolis require only $4T$ gates. This makes QROM significantly cheaper for $N \le 10^5$.
 * **Crossover Sensitivity:** The $N \approx 10^6$ crossover in Figure 6 compares theoretical best-case unary iteration QROM ($8(N-1)$ $T$-gates) against unmerged continuous QFT rotation synthesis. Compiling discrete reversible arithmetic (e.g., Toffoli-based adders with $\mathcal{O}(n^2)$ $T$-gates) shifts the crossover down near $N \approx 10^3$.
 * **Conservative Gridsynth Proxy:** Treating all rotations in `QuadraticForm` as arbitrary angles provides an upper bound. Merging diagonal terms ($x_j^2 = x_j$) and compiling exact dyadic angles ($CZ, CS, T$) directly further reduces coherent $T$-counts.
 

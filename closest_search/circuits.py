@@ -1,42 +1,38 @@
-"""Circuit builders for closest-value unstructured quantum search.
+"""Circuit builders for closest-value quantum search with computed arithmetic.
 
-Every value is *computed* coherently from the index register with arithmetic
-primitives, so a single oracle call costs O(poly(n, m)) gates -- polynomial in
-log(N) -- rather than the O(N) gates of an explicit lookup-table (QROM) oracle.
-This preserves Grover's asymptotic O(poly(log N) * sqrt(N)) gate scaling over
-the O(N * sqrt(N)) gate scaling of tabular lookups.
+Values are computed coherently from the index register using phase arithmetic,
+costing O(poly(n, m)) = O(poly(log N)) gates per oracle call rather than the
+O(N) gates required by an explicit lookup-table (QROM) oracle. This preserves
+Grover's asymptotic O(poly(log N) * sqrt(N)) total gate complexity.
 
-Architectural Pipeline Separation:
----------------------------------
-The search oracle is modularized into two distinct stages:
-  1. Value Loader:
-     - Coherent Arithmetic Loader (`value_function` / `QuadraticForm`): computes
-       |i>|0> -> |i>|f(i)> via QFT phase arithmetic in O(n^2 * m) gates.
-     - Tabular QROM Loader (`qrom_value_function`): loads precomputed values
-       from a lookup table via Gray-code multi-controlled X traversal in O(m * 2^n) gates.
-  2. Common Downstream Pipeline:
-     - Constant subtraction (`add_constant(-t)`): Draper QFT adder mapping
-       (val, sign) -> f(i) - t in (m+1)-bit two's complement.
-     - Absolute value (`absolute_value(m)`): sign-controlled two's complement
-       negation mapping val -> |f(i) - t|.
-     - Threshold comparison (`IntegerComparator`): ripple-carry comparator setting
-       flag <- (|f(i) - t| < threshold).
-     - Phase kick: Z(flag) flips the phase of marked states.
-     - Exact uncomputation: reverses all dirty registers back to |0>.
+Oracle Pipeline Stages:
+-----------------------
+1. Value Loader:
+   - Coherent Arithmetic Loader (`value_function` / `QuadraticForm`): computes
+     |i>|0> -> |i>|f(i)> via QFT phase arithmetic in O(n^2 * m) gates.
+   - Tabular QROM Loader (`qrom_value_function`): loads precomputed values
+     from a lookup table via Gray-code multi-controlled X traversal in O(m * 2^n) gates.
+2. Downstream Pipeline:
+   - Constant subtraction (`add_constant(-t)`): Draper QFT adder mapping
+     (val, sign) -> f(i) - t in (m+1)-bit two's complement.
+   - Absolute value (`absolute_value(m)`): sign-controlled two's complement
+     negation mapping val -> |f(i) - t|.
+   - Threshold comparison (`IntegerComparator`): ripple-carry comparator setting
+     flag <- (|f(i) - t| < threshold).
+   - Phase kick: Z(flag) flips the phase of marked states.
+   - Exact uncomputation: reverses all dirty registers back to |0>.
 
-The "Quadratic Sweet Spot":
----------------------------
-Quadratic polynomials f(i) = a*i^2 + b*i + c mod 2^m represent a uniquely favorable
-"sweet spot" for coherent quantum arithmetic:
-  - When expanding the integer index i = sum_j 2^j x_j, the square i^2 decomposes
-    into pairwise products x_j x_k without carry propagation.
+Phase Coupling for Quadratic Polynomials:
+-----------------------------------------
+For f(i) = (a*i^2 + b*i + c) mod 2^m:
+  - Expanding the integer index i = sum_j 2^j x_j decomposes the square i^2 into
+    pairwise bit products x_j x_k without carry propagation.
   - In QFT basis, each bit product x_j x_k couples directly to result qubit l
     via a 2-qubit controlled-phase (CP) rotation with angle 2*pi * a * 2^(j+k+l) / 2^m.
-  - This requires ZERO intermediate carry ancillas and ZERO Toffoli multipliers.
-  - In contrast, higher-degree polynomials (e.g. cubic i^3), non-polynomial functions
-    (reciprocals 1/x, square roots), or cryptographic hash functions (SHA-256, AES)
-    require general reversible arithmetic networks (ripple-carry adders, Wallace-tree
-    multipliers) with O(m^2) Toffoli gates and substantial ancilla scratch space.
+  - This avoids intermediate carry ancillas and Toffoli multiplier trees.
+  - In contrast, higher-degree polynomials (e.g. cubic i^3) or non-polynomial
+    functions require general reversible arithmetic networks (ripple-carry adders,
+    Wallace-tree multipliers) with O(m^2) Toffoli gates and additional ancillae.
 """
 
 from __future__ import annotations
@@ -77,8 +73,7 @@ def value_function(n: int, m: int, a: int, b: int, c: int) -> QuantumCircuit:
     Gate cost is O(n^2 * m): one controlled(-controlled) phase per
     (bit-pair, result-qubit) combination, plus a QFT on the result register.
     Because quadratic terms depend only on pairwise bit products x_j x_k,
-    this arithmetic requires zero carry ancillas and no Toffoli multiplier tree
-    (the "quadratic sweet spot").
+    this arithmetic requires zero carry ancillas and no Toffoli multiplier tree.
     """
     if n < 1 or m < 1:
         raise ValueError(f"n and m must be positive integers, got n={n}, m={m}")

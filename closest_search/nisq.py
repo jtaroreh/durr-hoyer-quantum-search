@@ -1,9 +1,8 @@
 """NISQ gate complexity modeling and record computation.
 
-Provides unified, typed data models and computation routines for NISQ gate counts,
+Provides data models and computation routines for NISQ gate counts,
 Grover and Dürr–Høyer iteration accounting, and classical complexity baselines.
-Acts as the single source of truth for both CLI scaling tables (scaling.py)
-and visual figures (closest_search/plotting.py).
+Used by CLI scaling tables (scaling.py) and plotting routines (closest_search/plotting.py).
 """
 
 from __future__ import annotations
