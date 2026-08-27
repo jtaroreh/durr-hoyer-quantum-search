@@ -1,5 +1,3 @@
-"""Unit tests for visualization and plotting routines."""
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -58,7 +56,6 @@ def test_plot_quantum_amplitudes(tmp_path: Path):
 
 
 def test_plot_quantum_amplitudes_suboptimal_basin(tmp_path: Path):
-    # Candidate basin amplified: [1, 5], but true global optimum is only [1]
     hist = {1: 1000, 5: 900, 3: 50, 7: 50}
     candidate_set = [1, 5]
     global_set = [1]

@@ -1,5 +1,3 @@
-"""CLI failure modes and install-doc guards."""
-
 from __future__ import annotations
 
 import sys

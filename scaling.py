@@ -137,7 +137,6 @@ def main() -> None:
         if not args.markdown:
             print("-" * len(p_header))
 
-    # Empirical QROM vs. Computed Oracle Comparison
     if args.markdown:
         print("\n### Empirical QROM vs. Computed Oracle Comparison ($n \\le 6$)\n")
         print("Direct gate-level comparison between an explicit value-loading QROM oracle ($|i\\rangle|0\\rangle \\to |i\\rangle|f(i)\\rangle$, optimized with Gray-code traversal) and the coherent arithmetic oracle (`QuadraticForm`), both transpiled to elementary basis $\\{u, cx\\}$ under `optimization_level=1, seed_transpiler=42` using the identical subtraction, absolute value, and comparator pipeline:\n")
@@ -171,10 +170,8 @@ def main() -> None:
     if not args.markdown:
         print("-" * len(q_header))
 
-    # Regime 3: Fault-Tolerant Clifford+T Scaling & Crossover Ranges
     ft_n_values = [2, 3, 4, 6, 8, 10, 12, 14, 16, 18, 19, 20]
 
-    # --- Table 3A: Value Loader Stage ---
     if args.markdown:
         print("\n### Regime 3A: Fault-Tolerant Clifford+T Value Loader Scaling ($T_{\\text{load}}$) & Crossover Ranges\n")
         print(
@@ -235,7 +232,6 @@ def main() -> None:
     if not args.markdown:
         print("-" * len(ft_header))
 
-    # --- Table 3B: Full Distance Oracle Stage ---
     if args.markdown:
         print("\n### Regime 3B: Fault-Tolerant Clifford+T Full Distance Oracle Comparison ($T_{\\text{oracle}}$)\n")
         print(
