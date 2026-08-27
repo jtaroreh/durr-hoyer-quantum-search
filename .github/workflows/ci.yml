@@ -89,9 +89,9 @@ jobs:
         uv venv /tmp/isolated-env --python 3.12
         WHEEL_FILE=$(ls dist/*.whl | head -n 1)
         uv pip install --python /tmp/isolated-env "${WHEEL_FILE}[all]"
+        /tmp/isolated-env/bin/durr-hoyer-demo --n 3 --m 4
+        /tmp/isolated-env/bin/durr-hoyer-scale --max-n 4
         /tmp/isolated-env/bin/durr-heyer-demo --n 3 --m 4
         /tmp/isolated-env/bin/durr-heyer-scale --max-n 4
-        /tmp/isolated-env/bin/durr-hoyer-demo --help
-        /tmp/isolated-env/bin/durr-hoyer-scale --help
 
 

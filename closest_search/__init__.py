@@ -1,12 +1,10 @@
 """Closest-value unstructured quantum search with a computed-function oracle.
 
 Finds argmin_i |f(i) - target| for f(i) = (A*i^2 + B*i + C) mod 2^m using
-Grover search wrapped in the Durr-Hoyer minimum-finding loop.
+Grover search wrapped in the Dürr–Høyer minimum-finding loop.
 """
 
 from __future__ import annotations
-
-from typing import Any
 
 from .circuits import (
     absolute_value,
@@ -54,26 +52,6 @@ from .search import (
 
 __version__ = "0.2.0"
 
-_PLOTTING_SYMBOLS = {
-    "plot_durr_hoyer_trajectory",
-    "plot_ftqc_crossover",
-    "plot_nisq_scaling",
-    "plot_oracle_pipeline",
-    "plot_qrom_vs_coherent_nisq",
-    "plot_quantum_amplitudes",
-    "setup_plot_theme",
-}
-
-
-def __getattr__(name: str) -> Any:
-    """Lazy-load plotting routines to keep core imports lightweight."""
-    if name in _PLOTTING_SYMBOLS:
-        from . import plotting
-
-        return getattr(plotting, name)
-    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
-
-
 __all__ = [
     "ClassicalAlgebraicRecord",
     "FTQCResourceVector",
@@ -106,19 +84,9 @@ __all__ = [
     "ftqc_rotation_t_count",
     "grover_circuit",
     "optimal_grover_iterations",
-    "plot_durr_hoyer_trajectory",
-    "plot_ftqc_crossover",
-    "plot_nisq_scaling",
-    "plot_oracle_pipeline",
-    "plot_qrom_vs_coherent_nisq",
-    "plot_quantum_amplitudes",
     "projected_statevector_bytes",
     "qrom_distance_oracle",
     "qrom_value_function",
-    "setup_plot_theme",
     "total_oracle_qubits",
     "value_function",
 ]
-
-
-

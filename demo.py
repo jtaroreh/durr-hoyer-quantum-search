@@ -1,19 +1,21 @@
 """End-to-end demo of closest-value unstructured quantum search.
 
 Searches for the index i whose value f(i) = (A*i^2 + B*i + C) mod 2^m is
-closest to a query target, using Grover search inside the Durr-Hoyer
-minimum-finding loop.  Prints the value table, the threshold evolution
+closest to a query target, using Grover search inside the Dürr–Høyer
+minimum-finding loop. Prints the value table, the threshold evolution
 round by round, a final measurement histogram over the closest set, and a
 comparison against the classical exhaustive scan.
 
 Usage:
     python demo.py [--n 3] [--m 4] [--a 2] [--b 3] [--c 1] [--target 6] [--seed 7]
+                   [--force-unbounded] [--plot] [--save-plots [DIR]]
 """
 
 from __future__ import annotations
 
 import argparse
 import math
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -73,12 +75,6 @@ def main() -> None:
 
     total_q = total_oracle_qubits(n, m)
     mem_mb = projected_statevector_bytes(n, m) / (1024 * 1024)
-    if total_q > 26 and not args.force_unbounded:
-        p.error(
-            f"Total simulated circuit qubits ({total_q} qubits = {n} idx + {2*m+1} aux) "
-            f"exceeds safety limit of 26 qubits (~{mem_mb:.1f} MB statevector). "
-            f"Pass --force-unbounded to override."
-        )
 
     big_n, mod = 2**n, 2**m
     rng = np.random.default_rng(args.seed)
@@ -92,9 +88,10 @@ def main() -> None:
             "Install simulation dependencies via:\n"
             "    pip install 'durr-hoyer-quantum-search[sim]'\n"
             "or:\n"
-            "    pip install qiskit-aer"
+            "    pip install qiskit-aer",
+            file=sys.stderr,
         )
-        return
+        raise SystemExit(1)
 
     print("=" * 64)
     print("Closest-value unstructured quantum search (computed oracle)")
@@ -102,15 +99,21 @@ def main() -> None:
     print(f"f(i) = ({a}*i^2 + {b}*i + {c}) mod {mod},   N = {big_n} objects")
     print(f"target t = {target} | simulated circuit: {total_q} qubits (~{mem_mb:.2f} MB statevector)\n")
 
-    values = f_values(n, m, a, b, c)
+    try:
+        values = f_values(n, m, a, b, c)
+    except ValueError as exc:
+        p.error(str(exc))
     print(f"{'i':>4} {'f(i)':>6} {'|f(i)-t|':>9}")
     for i, v in enumerate(values):
         print(f"{i:>4} {v:>6} {abs(v - target):>9}")
 
-    print("\n--- Durr-Hoyer search ---")
-    result = closest_value_search(
-        n, m, a, b, c, target, rng=rng, simulator=simulator, force_unbounded=args.force_unbounded
-    )
+    print("\n--- Dürr–Høyer search ---")
+    try:
+        result = closest_value_search(
+            n, m, a, b, c, target, rng=rng, simulator=simulator, force_unbounded=args.force_unbounded
+        )
+    except ValueError as exc:
+        p.error(str(exc))
     print(f"{'round':>6} {'threshold':>10} {'grover its':>11} {'measured i':>11} "
           f"{'dist':>5}  improved")
     for r_i, r in enumerate(result.rounds):
@@ -121,8 +124,10 @@ def main() -> None:
     print(f"\nquantum answer          : index {result.best_index}, "
           f"f = {values[result.best_index]}, distance = {result.best_distance}")
     dh_bound = 11.25 * math.sqrt(big_n) + 0.7 * (n**2)
+    sim_ceiling = math.ceil(15 * math.sqrt(big_n)) + 10
     print(f"oracle queries          : {result.oracle_queries} "
-          f"(expected query complexity ≤ 11.25√N + 0.7 log²N = 11.25√{big_n} + {0.7 * (n**2):.1f} ≈ {dh_bound:.1f})")
+          f"(paper expected bound ≤ 11.25√N + 0.7 log²N ≈ {dh_bound:.1f}; "
+          f"this run stops at distance 0 or {sim_ceiling} queries)")
 
     best_d, best_set = classical_closest(n, m, a, b, c, target)
     struct_d, struct_set, struct_evals = classical_structured_closest(n, m, a, b, c, target)
@@ -174,9 +179,10 @@ def main() -> None:
                 "Install plotting dependencies via:\n"
                 "    pip install 'durr-hoyer-quantum-search[plot]'\n"
                 "or:\n"
-                "    pip install matplotlib seaborn"
+                "    pip install matplotlib seaborn",
+                file=sys.stderr,
             )
-            return
+            raise SystemExit(1)
 
         save_dir = Path(args.save_plots) if args.save_plots else None
         pipeline_path = save_dir / "oracle_pipeline.png" if save_dir else None
@@ -190,12 +196,10 @@ def main() -> None:
             best_set=quantum_closest_set,
             target=target,
             n=n,
-            m=m,
             global_optima_set=best_set,
             save_path=amp_path,
             show=args.plot,
         )
-
 
 
 if __name__ == "__main__":

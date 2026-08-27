@@ -122,10 +122,6 @@ class ClassicalAlgebraicRecord:
     hensel_branches_explored: int
     estimated_bit_ops: int
 
-    def __iter__(self):
-        """Allow backward-compatible unpacking: dist, indices, layers = record."""
-        return iter((self.min_distance, self.argmin_indices, self.delta_layers_tested))
-
 
 def _solve_quadratic_congruence_mod_2m_detailed(
     a: int, b: int, c_prime: int, m: int
@@ -172,14 +168,6 @@ def _solve_quadratic_congruence_mod_2m_detailed(
     return roots, evals, branches, bit_ops
 
 
-def _solve_quadratic_congruence_mod_2m(
-    a: int, b: int, c_prime: int, m: int
-) -> list[int]:
-    """Find all roots x in [0, 2^m) satisfying a*x^2 + b*x + c_prime = 0 mod 2^m."""
-    roots, _, _, _ = _solve_quadratic_congruence_mod_2m_detailed(a, b, c_prime, m)
-    return roots
-
-
 def classical_algebraic_closest(
     n: int, m: int, a: int, b: int, c: int, target: int
 ) -> ClassicalAlgebraicRecord:
@@ -200,7 +188,7 @@ def classical_algebraic_closest(
         tracking modular arithmetic cost per branch node.
 
     Returns:
-        ClassicalAlgebraicRecord (unpacks as (min_distance, argmin_indices, layers_tested))
+        ClassicalAlgebraicRecord
     """
     if n < 1 or m < 1:
         raise ValueError(f"n and m must be positive integers, got n={n}, m={m}")
@@ -275,7 +263,7 @@ class Round:
     improved: bool
 
 
-@dataclass
+@dataclass(frozen=True)
 class SearchResult:
     best_index: int
     best_distance: int

@@ -13,36 +13,25 @@ Evaluates gate and resource scaling across three regimes:
      (Ross & Selinger 2016) across synthesis error budgets eps in {10^-4, 10^-6, 10^-8, 10^-10}.
 
 Usage:
-    python scaling.py [--max-n 12] [--markdown]
+    python scaling.py [--max-n 12] [--markdown] [--plot] [--save-plots [DIR]]
 """
 
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from closest_search.ftqc import (
-    classical_bit_ops_per_eval,
     ftqc_coherent_loader_t_count,
-    ftqc_common_pipeline_t_count,
     ftqc_full_oracle_resources,
     ftqc_qrom_loader_t_count,
-    ftqc_rotation_t_count,
 )
 from closest_search.nisq import (
     compute_nisq_scaling_records,
     compute_periodic_scaling_records,
     compute_qrom_comparison_records,
 )
-
-__all__ = [
-    "classical_bit_ops_per_eval",
-    "ftqc_coherent_loader_t_count",
-    "ftqc_common_pipeline_t_count",
-    "ftqc_qrom_loader_t_count",
-    "ftqc_rotation_t_count",
-    "main",
-]
 
 
 def main() -> None:
@@ -125,7 +114,7 @@ def main() -> None:
         print(p_header)
         print("-" * len(p_header))
 
-    periodic_records = compute_periodic_scaling_records(max_n=args.max_n, m_fixed=4, a=a, b=b, c=c)
+    periodic_records = compute_periodic_scaling_records(max_n=args.max_n, m_fixed=4)
     if not periodic_records:
         if args.markdown:
             print("*Regime 2 omitted: requires $n \\ge 4$ ($N > 2^m$).*")
@@ -148,7 +137,6 @@ def main() -> None:
         if not args.markdown:
             print("-" * len(p_header))
 
-    # Empirical QROM vs. Computed Oracle Comparison
     if args.markdown:
         print("\n### Empirical QROM vs. Computed Oracle Comparison ($n \\le 6$)\n")
         print("Direct gate-level comparison between an explicit value-loading QROM oracle ($|i\\rangle|0\\rangle \\to |i\\rangle|f(i)\\rangle$, optimized with Gray-code traversal) and the coherent arithmetic oracle (`QuadraticForm`), both transpiled to elementary basis $\\{u, cx\\}$ under `optimization_level=1, seed_transpiler=42` using the identical subtraction, absolute value, and comparator pipeline:\n")
@@ -182,10 +170,8 @@ def main() -> None:
     if not args.markdown:
         print("-" * len(q_header))
 
-    # Regime 3: Fault-Tolerant Clifford+T Scaling & Crossover Ranges
     ft_n_values = [2, 3, 4, 6, 8, 10, 12, 14, 16, 18, 19, 20]
 
-    # --- Table 3A: Value Loader Stage ---
     if args.markdown:
         print("\n### Regime 3A: Fault-Tolerant Clifford+T Value Loader Scaling ($T_{\\text{load}}$) & Crossover Ranges\n")
         print(
@@ -196,9 +182,9 @@ def main() -> None:
             "Both loaders connect to the identical downstream subtraction/comparator pipeline ($T_{\\text{common}} = O(m^2)$):\n"
         )
         print(
-            "| $n$ | $m$ | $N=2^n$ | QROM Loader $T$ ($8(N-1)$) | Coherent Loader $T$ ($\\\\varepsilon=10^{-4}$) | "
-            "Coherent Loader $T$ ($\\\\varepsilon=10^{-6}$) | Coherent Loader $T$ ($\\\\varepsilon=10^{-8}$) | "
-            "Coherent Loader $T$ ($\\\\varepsilon=10^{-10}$) | Loader Ratio ($\\\\varepsilon=10^{-6}$) |"
+            "| $n$ | $m$ | $N=2^n$ | QROM Loader $T$ ($8(N-1)$) | Coherent Loader $T$ ($\\varepsilon=10^{-4}$) | "
+            "Coherent Loader $T$ ($\\varepsilon=10^{-6}$) | Coherent Loader $T$ ($\\varepsilon=10^{-8}$) | "
+            "Coherent Loader $T$ ($\\varepsilon=10^{-10}$) | Loader Ratio ($\\varepsilon=10^{-6}$) |"
         )
         print(
             "| --: | --: | ------: | -------------------------: | -------------------------------------------: | "
@@ -246,7 +232,6 @@ def main() -> None:
     if not args.markdown:
         print("-" * len(ft_header))
 
-    # --- Table 3B: Full Distance Oracle Stage ---
     if args.markdown:
         print("\n### Regime 3B: Fault-Tolerant Clifford+T Full Distance Oracle Comparison ($T_{\\text{oracle}}$)\n")
         print(
@@ -255,9 +240,9 @@ def main() -> None:
             "allocating error budget $\\varepsilon_{\\text{stage}} = \\varepsilon / 2$ equally between value loading and downstream arithmetic:\n"
         )
         print(
-            "| $n$ | $m$ | $N=2^n$ | QROM Full Oracle $T$ ($\\\\varepsilon=10^{-6}$) | Coh Full Oracle $T$ ($\\\\varepsilon=10^{-4}$) | "
-            "Coh Full Oracle $T$ ($\\\\varepsilon=10^{-6}$) | Coh Full Oracle $T$ ($\\\\varepsilon=10^{-8}$) | "
-            "Coh Full Oracle $T$ ($\\\\varepsilon=10^{-10}$) | Oracle Ratio ($\\\\varepsilon=10^{-6}$) |"
+            "| $n$ | $m$ | $N=2^n$ | QROM Full Oracle $T$ ($\\varepsilon=10^{-6}$) | Coh Full Oracle $T$ ($\\varepsilon=10^{-4}$) | "
+            "Coh Full Oracle $T$ ($\\varepsilon=10^{-6}$) | Coh Full Oracle $T$ ($\\varepsilon=10^{-8}$) | "
+            "Coh Full Oracle $T$ ($\\varepsilon=10^{-10}$) | Oracle Ratio ($\\varepsilon=10^{-6}$) |"
         )
         print(
             "| --: | --: | ------: | -------------------------------------------: | ------------------------------------------: | "
@@ -355,9 +340,10 @@ def main() -> None:
                 "Install plotting dependencies via:\n"
                 "    pip install 'durr-hoyer-quantum-search[plot]'\n"
                 "or:\n"
-                "    pip install matplotlib seaborn"
+                "    pip install matplotlib seaborn",
+                file=sys.stderr,
             )
-            return
+            raise SystemExit(1)
 
         save_dir = Path(args.save_plots) if args.save_plots else None
         pipeline_path = save_dir / "oracle_pipeline.png" if save_dir else None
@@ -377,7 +363,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
 
 

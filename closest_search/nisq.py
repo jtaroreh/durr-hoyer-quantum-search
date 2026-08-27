@@ -35,11 +35,6 @@ class NISQScalingRecord:
     dh_total_q_gates: int
     c_blackbox_bit_ops: int
     c_blackbox_cpu_ops: int
-    grover_oracle_calls: int = 0
-    grover_diffuser_calls: int = 0
-    dh_expected_quantum_queries: float = 0.0
-    dh_expected_classical_verifications: int = 0
-    verification_queries: int = 1
 
     @property
     def oracle_str(self) -> str:
@@ -182,11 +177,6 @@ def compute_nisq_scaling_records(
                 dh_total_q_gates=dh_total_q_gates,
                 c_blackbox_bit_ops=c_blackbox_bit_ops,
                 c_blackbox_cpu_ops=c_blackbox_cpu_ops,
-                grover_oracle_calls=grover_iters,
-                grover_diffuser_calls=grover_iters,
-                dh_expected_quantum_queries=dh_expected_queries,
-                dh_expected_classical_verifications=max(1, math.ceil(math.log2(big_n))),
-                verification_queries=1,
             )
         )
 
@@ -196,16 +186,14 @@ def compute_nisq_scaling_records(
 def compute_periodic_scaling_records(
     max_n: int = 8,
     m_fixed: int = 4,
-    a: int = 2,
-    b: int = 3,
-    c: int = 1,
 ) -> list[PeriodicScalingRecord]:
     """Compute classical evaluation complexity under modular periodicity f(i + 2^m) = f(i).
+
+    Counts depend only on n and m, not on the polynomial coefficients.
 
     Args:
         max_n: Maximum number of index qubits.
         m_fixed: Fixed value register width.
-        a, b, c: Polynomial coefficients.
 
     Returns:
         List of PeriodicScalingRecord dataclasses for n in [4, min(8, max_n)], or [] if max_n < 4.

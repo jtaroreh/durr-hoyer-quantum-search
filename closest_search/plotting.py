@@ -202,7 +202,6 @@ def plot_quantum_amplitudes(
     best_set: list[int] | set[int],
     target: int,
     n: int,
-    m: int,
     global_optima_set: list[int] | set[int] | None = None,
     save_path: str | Path | None = None,
     show: bool = False,
@@ -214,7 +213,6 @@ def plot_quantum_amplitudes(
         best_set: Set of indices marked/amplified in this circuit run (e.g. quantum candidate basin).
         target: Query target value t.
         n: Number of index qubits.
-        m: Number of value qubits.
         global_optima_set: Optional true global minimum indices. If provided and different from
             best_set, distinguishes between the amplified candidate basin and the true global optimum.
         save_path: Optional path to save figure.
@@ -495,7 +493,7 @@ def plot_ftqc_crossover(
     setup_plot_theme()
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    n_vals = [2, 3, 4, 6, 8, 10, 12, 14, 16, 18, 19, 20, 21, 22]
+    n_vals = [2, 3, 4, 6, 8, 10, 12, 14, 16, 18, 19, 20]
     big_n_vals = [2**n for n in n_vals]
 
     # QROM T-count: 8(2^n - 1)
