@@ -13,36 +13,25 @@ Evaluates gate and resource scaling across three regimes:
      (Ross & Selinger 2016) across synthesis error budgets eps in {10^-4, 10^-6, 10^-8, 10^-10}.
 
 Usage:
-    python scaling.py [--max-n 12] [--markdown]
+    python scaling.py [--max-n 12] [--markdown] [--plot] [--save-plots [DIR]]
 """
 
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from closest_search.ftqc import (
-    classical_bit_ops_per_eval,
     ftqc_coherent_loader_t_count,
-    ftqc_common_pipeline_t_count,
     ftqc_full_oracle_resources,
     ftqc_qrom_loader_t_count,
-    ftqc_rotation_t_count,
 )
 from closest_search.nisq import (
     compute_nisq_scaling_records,
     compute_periodic_scaling_records,
     compute_qrom_comparison_records,
 )
-
-__all__ = [
-    "classical_bit_ops_per_eval",
-    "ftqc_coherent_loader_t_count",
-    "ftqc_common_pipeline_t_count",
-    "ftqc_qrom_loader_t_count",
-    "ftqc_rotation_t_count",
-    "main",
-]
 
 
 def main() -> None:
@@ -355,9 +344,10 @@ def main() -> None:
                 "Install plotting dependencies via:\n"
                 "    pip install 'durr-hoyer-quantum-search[plot]'\n"
                 "or:\n"
-                "    pip install matplotlib seaborn"
+                "    pip install matplotlib seaborn",
+                file=sys.stderr,
             )
-            return
+            raise SystemExit(1)
 
         save_dir = Path(args.save_plots) if args.save_plots else None
         pipeline_path = save_dir / "oracle_pipeline.png" if save_dir else None
@@ -377,7 +367,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
 
 

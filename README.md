@@ -18,6 +18,8 @@ To retain an asymptotic advantage at the physical gate level ($\mathcal{O}(\text
 
 ## Quick Start
 
+Requires Python 3.10, 3.11, or 3.12. `.[all]` pulls in the simulator (`qiskit-aer`), plotting, and test extras. A bare `pip install -e .` cannot run `demo.py`.
+
 ```bash
 git clone https://github.com/jtaroreh/durr-hoyer-quantum-search.git
 cd durr-hoyer-quantum-search
@@ -25,14 +27,18 @@ cd durr-hoyer-quantum-search
 # Recommended: locked environment with all dependencies (uv)
 uv sync --locked --all-extras
 
-# Or install with pip in editable mode
-pip install -e .[all]
+# Or install with pip in editable mode (quotes keep zsh from globbing [all])
+pip install -e '.[all]'
 
 # Run the end-to-end search demo (N=8) and save plots
 python demo.py --save-plots figures/
 
 # Run gate scaling benchmarks across NISQ and FTQC regimes
 python scaling.py --max-n 12 --save-plots figures/
+
+# Same commands after a package install (durr-heyer-* is an alias)
+durr-hoyer-demo --save-plots figures/
+durr-hoyer-scale --max-n 12 --save-plots figures/
 
 # Run the test suite
 pytest tests/
@@ -68,9 +74,9 @@ Quadratic polynomials $f(i) = (a i^2 + b i + c) \bmod 2^m$ represent a uniquely 
 Because the number of marked items is unknown and changes as the threshold decreases, the algorithm uses the Boyer–Brassard–Høyer–Tapp (BBHT) adaptive schedule:
 
 1. Sample an initial random index $i_0$ and set $\text{threshold} = |f(i_0) - t|$.
-2. Run Grover search with schedule parameter $m_{\text{BBHT}} \leftarrow \min((6/5) m_{\text{BBHT}}, \sqrt{N})$.
-3. Measure an index $i'$ and verify classically. If $|f(i') - t| < \text{threshold}$, update the threshold and reset the schedule.
-4. Terminate when distance 0 is found or the total query budget of $\approx 11.25\sqrt{N}$ is exhausted.
+2. Draw Grover iteration count $j$ uniformly from $\{0,\ldots,\lceil m_{\text{BBHT}}\rceil-1\}$. After a non-improving round, grow $m_{\text{BBHT}} \leftarrow \min((6/5) m_{\text{BBHT}}, \sqrt{N})$. After an improvement, reset $m_{\text{BBHT}}$ to $1$.
+3. Measure an index $i'$ and verify classically. If $|f(i') - t| < \text{threshold}$, update the threshold.
+4. Stop when distance 0 is found or the simulator query ceiling $\lceil 15\sqrt{N}\rceil + 10$ is reached. The paper's expected query count is $(45/4)\sqrt{N} + 0.7\log_2^2 N \approx 11.25\sqrt{N}$; the tables use that bound, not the simulator ceiling.
 
 ![Dürr–Høyer Search Trajectory](figures/durr_hoyer_trajectory.png)
 *Figure 2:* Left: Search space landscape $|f(i)-t|$ with global minimum marked. Right: Dynamic threshold ladder stepping down round-by-round.
@@ -209,7 +215,7 @@ In fault-tolerant quantum computing (FTQC), arbitrary continuous rotations (such
 <details>
 <summary>Fault-tolerant value loader comparison table (T-count, n = 2 to 20)</summary>
 
-Evaluating `python scaling.py --max-n 12 --markdown` isolates the **Value Loader stage** ($T_{\text{load}}$):
+`python scaling.py --markdown` prints every regime table. `--max-n` only truncates the empirical NISQ and QROM tables. The FTQC loader and full-oracle rows use a fixed $n$ grid through $20$. The value-loader table ($T_{\text{load}}$) is:
 
 | $n$ | $m$ | $N=2^n$ | QROM Loader $T$ ($8(N-1)$) | Coherent Loader $T$ ($\varepsilon=10^{-4}$) | Coherent Loader $T$ ($\varepsilon=10^{-6}$) | Coherent Loader $T$ ($\varepsilon=10^{-8}$) | Coherent Loader $T$ ($\varepsilon=10^{-10}$) | Loader Ratio ($\varepsilon=10^{-6}$) |
 | --: | --: | ------: | -------------------------: | -------------------------------------------: | -------------------------------------------: | -------------------------------------------: | --------------------------------------------: | -------------------------------------: |
@@ -269,4 +275,4 @@ Clifford+T cost for the complete distance oracle (loader + subtraction + absolut
 | `closest_search/plotting.py` | Matplotlib & Seaborn visualization routines |
 | `demo.py` | CLI demo for search progression, measurement distributions, and figure export |
 | `scaling.py` | Benchmark script for gate scaling, QROM comparison, and Clifford+T crossover analysis |
-| `tests/` | Unit tests for circuits, baseline solvers, FTQC models, plotting, and README table reproducibility |
+| `tests/` | Unit tests for circuits, baseline solvers, FTQC models, plotting, and CLI failure modes |

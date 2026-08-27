@@ -1,7 +1,7 @@
 """Closest-value unstructured quantum search with a computed-function oracle.
 
 Finds argmin_i |f(i) - target| for f(i) = (A*i^2 + B*i + C) mod 2^m using
-Grover search wrapped in the Durr-Hoyer minimum-finding loop.
+Grover search wrapped in the Dürr–Høyer minimum-finding loop.
 """
 
 from __future__ import annotations

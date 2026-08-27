@@ -80,7 +80,6 @@ def test_plot_quantum_amplitudes_suboptimal_basin(tmp_path: Path):
     assert out_file.stat().st_size > 0
 
 
-
 def test_plot_nisq_scaling(tmp_path: Path):
     out_file = tmp_path / "nisq_scaling.png"
     fig = plot_nisq_scaling(max_n=3, save_path=out_file, show=False)

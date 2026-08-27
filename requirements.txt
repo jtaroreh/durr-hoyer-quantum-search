@@ -1,5 +1,6 @@
 # Unpinned convenience requirements for standard pip workflows.
 # For exact reproducible environments, use `uv sync --locked --all-extras` (driven by uv.lock).
+# ruff, mypy, pytest-cov, and build are listed under [project.optional-dependencies] dev.
 qiskit>=1.0.0
 qiskit-aer>=0.15.0
 numpy>=1.26

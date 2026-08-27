@@ -1,19 +1,21 @@
 """End-to-end demo of closest-value unstructured quantum search.
 
 Searches for the index i whose value f(i) = (A*i^2 + B*i + C) mod 2^m is
-closest to a query target, using Grover search inside the Durr-Hoyer
-minimum-finding loop.  Prints the value table, the threshold evolution
+closest to a query target, using Grover search inside the Dürr–Høyer
+minimum-finding loop. Prints the value table, the threshold evolution
 round by round, a final measurement histogram over the closest set, and a
 comparison against the classical exhaustive scan.
 
 Usage:
     python demo.py [--n 3] [--m 4] [--a 2] [--b 3] [--c 1] [--target 6] [--seed 7]
+                   [--force-unbounded] [--plot] [--save-plots [DIR]]
 """
 
 from __future__ import annotations
 
 import argparse
 import math
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -92,9 +94,10 @@ def main() -> None:
             "Install simulation dependencies via:\n"
             "    pip install 'durr-hoyer-quantum-search[sim]'\n"
             "or:\n"
-            "    pip install qiskit-aer"
+            "    pip install qiskit-aer",
+            file=sys.stderr,
         )
-        return
+        raise SystemExit(1)
 
     print("=" * 64)
     print("Closest-value unstructured quantum search (computed oracle)")
@@ -107,7 +110,7 @@ def main() -> None:
     for i, v in enumerate(values):
         print(f"{i:>4} {v:>6} {abs(v - target):>9}")
 
-    print("\n--- Durr-Hoyer search ---")
+    print("\n--- Dürr–Høyer search ---")
     result = closest_value_search(
         n, m, a, b, c, target, rng=rng, simulator=simulator, force_unbounded=args.force_unbounded
     )
@@ -121,8 +124,10 @@ def main() -> None:
     print(f"\nquantum answer          : index {result.best_index}, "
           f"f = {values[result.best_index]}, distance = {result.best_distance}")
     dh_bound = 11.25 * math.sqrt(big_n) + 0.7 * (n**2)
+    sim_ceiling = math.ceil(15 * math.sqrt(big_n)) + 10
     print(f"oracle queries          : {result.oracle_queries} "
-          f"(expected query complexity ≤ 11.25√N + 0.7 log²N = 11.25√{big_n} + {0.7 * (n**2):.1f} ≈ {dh_bound:.1f})")
+          f"(paper expected bound ≤ 11.25√N + 0.7 log²N ≈ {dh_bound:.1f}; "
+          f"this run stops at distance 0 or {sim_ceiling} queries)")
 
     best_d, best_set = classical_closest(n, m, a, b, c, target)
     struct_d, struct_set, struct_evals = classical_structured_closest(n, m, a, b, c, target)
@@ -174,9 +179,10 @@ def main() -> None:
                 "Install plotting dependencies via:\n"
                 "    pip install 'durr-hoyer-quantum-search[plot]'\n"
                 "or:\n"
-                "    pip install matplotlib seaborn"
+                "    pip install matplotlib seaborn",
+                file=sys.stderr,
             )
-            return
+            raise SystemExit(1)
 
         save_dir = Path(args.save_plots) if args.save_plots else None
         pipeline_path = save_dir / "oracle_pipeline.png" if save_dir else None
@@ -195,7 +201,6 @@ def main() -> None:
             save_path=amp_path,
             show=args.plot,
         )
-
 
 
 if __name__ == "__main__":
