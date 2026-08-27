@@ -66,12 +66,11 @@ _PLOTTING_SYMBOLS = {
 
 
 def __getattr__(name: str) -> Any:
-    """Lazy-load plotting routines to keep core imports lightweight."""
-    if name in _PLOTTING_SYMBOLS:
-        from . import plotting
+    if name not in _PLOTTING_SYMBOLS:
+        raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+    from . import plotting
 
-        return getattr(plotting, name)
-    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+    return getattr(plotting, name)
 
 
 __all__ = [
