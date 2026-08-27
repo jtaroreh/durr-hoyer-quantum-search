@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import matplotlib
+import pytest
 
-matplotlib.use("Agg")  # Force non-interactive backend for testing
-import matplotlib.pyplot as plt
+pytest.importorskip("matplotlib")
+import matplotlib  # noqa: E402
 
-from closest_search import (
-    SearchResult,
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
+
+from closest_search import SearchResult  # noqa: E402
+from closest_search.plotting import (  # noqa: E402
     plot_durr_hoyer_trajectory,
     plot_ftqc_crossover,
     plot_nisq_scaling,
@@ -17,7 +20,7 @@ from closest_search import (
     plot_quantum_amplitudes,
     setup_plot_theme,
 )
-from closest_search.search import Round
+from closest_search.search import Round  # noqa: E402
 
 
 def test_setup_plot_theme():
@@ -46,10 +49,10 @@ def test_plot_durr_hoyer_trajectory(tmp_path: Path):
 def test_plot_quantum_amplitudes(tmp_path: Path):
     hist = {1: 1800, 3: 50, 5: 100, 7: 98}
     best_set = [1]
-    n, m, target = 3, 4, 6
+    n, target = 3, 6
 
     out_file = tmp_path / "amplitudes.png"
-    fig = plot_quantum_amplitudes(hist, best_set, target, n, m, save_path=out_file, show=False)
+    fig = plot_quantum_amplitudes(hist, best_set, target, n, save_path=out_file, show=False)
     assert isinstance(fig, plt.Figure)
     assert out_file.exists()
     assert out_file.stat().st_size > 0
@@ -59,7 +62,7 @@ def test_plot_quantum_amplitudes_suboptimal_basin(tmp_path: Path):
     hist = {1: 1000, 5: 900, 3: 50, 7: 50}
     candidate_set = [1, 5]
     global_set = [1]
-    n, m, target = 3, 4, 6
+    n, target = 3, 6
 
     out_file = tmp_path / "amplitudes_suboptimal.png"
     fig = plot_quantum_amplitudes(
@@ -67,7 +70,6 @@ def test_plot_quantum_amplitudes_suboptimal_basin(tmp_path: Path):
         best_set=candidate_set,
         target=target,
         n=n,
-        m=m,
         global_optima_set=global_set,
         save_path=out_file,
         show=False,

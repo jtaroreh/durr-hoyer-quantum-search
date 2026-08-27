@@ -6,8 +6,6 @@ Grover search wrapped in the Dürr–Høyer minimum-finding loop.
 
 from __future__ import annotations
 
-from typing import Any
-
 from .circuits import (
     absolute_value,
     add_constant,
@@ -54,25 +52,6 @@ from .search import (
 
 __version__ = "0.2.0"
 
-_PLOTTING_SYMBOLS = {
-    "plot_durr_hoyer_trajectory",
-    "plot_ftqc_crossover",
-    "plot_nisq_scaling",
-    "plot_oracle_pipeline",
-    "plot_qrom_vs_coherent_nisq",
-    "plot_quantum_amplitudes",
-    "setup_plot_theme",
-}
-
-
-def __getattr__(name: str) -> Any:
-    if name not in _PLOTTING_SYMBOLS:
-        raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
-    from . import plotting
-
-    return getattr(plotting, name)
-
-
 __all__ = [
     "ClassicalAlgebraicRecord",
     "FTQCResourceVector",
@@ -105,19 +84,9 @@ __all__ = [
     "ftqc_rotation_t_count",
     "grover_circuit",
     "optimal_grover_iterations",
-    "plot_durr_hoyer_trajectory",
-    "plot_ftqc_crossover",
-    "plot_nisq_scaling",
-    "plot_oracle_pipeline",
-    "plot_qrom_vs_coherent_nisq",
-    "plot_quantum_amplitudes",
     "projected_statevector_bytes",
     "qrom_distance_oracle",
     "qrom_value_function",
-    "setup_plot_theme",
     "total_oracle_qubits",
     "value_function",
 ]
-
-
-

@@ -568,7 +568,7 @@ def test_parameter_bounds_and_validations():
         classical_structured_closest(3, 4, 1, 1, 1, target=16)
     with pytest.raises(ValueError):
         closest_value_search(0, 4, 1, 1, 1, target=2)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="safety ceiling"):
         closest_value_search(25, 4, 1, 1, 1, target=2)
     with pytest.raises(ValueError):
         closest_value_search(3, 4, 1, 1, 1, target=-1)
@@ -801,11 +801,9 @@ def test_quadratic_form_gate_term_counts():
 def test_classical_algebraic_closest(n, m, a, b, c, target):
     bb_d, bb_set = classical_closest(n, m, a, b, c, target)
     alg_rec = classical_algebraic_closest(n, m, a, b, c, target)
-    # Test unpacking compatibility
-    alg_d, alg_set, layers = alg_rec
-    assert alg_d == bb_d
-    assert alg_set == bb_set
-    assert layers > 0
+    assert alg_rec.min_distance == bb_d
+    assert alg_rec.argmin_indices == bb_set
+    assert alg_rec.delta_layers_tested > 0
 
     # Test detailed fields
     assert alg_rec.congruence_evaluations > 0
@@ -833,6 +831,8 @@ def test_search_data_models():
     assert res.best_index == 2
     assert len(res.rounds) == 1
     assert res.threshold_history == [1]
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        res.best_index = 0  # type: ignore[misc]
 
 
 

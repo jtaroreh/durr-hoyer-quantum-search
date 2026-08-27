@@ -75,12 +75,6 @@ def main() -> None:
 
     total_q = total_oracle_qubits(n, m)
     mem_mb = projected_statevector_bytes(n, m) / (1024 * 1024)
-    if total_q > 26 and not args.force_unbounded:
-        p.error(
-            f"Total simulated circuit qubits ({total_q} qubits = {n} idx + {2*m+1} aux) "
-            f"exceeds safety limit of 26 qubits (~{mem_mb:.1f} MB statevector). "
-            f"Pass --force-unbounded to override."
-        )
 
     big_n, mod = 2**n, 2**m
     rng = np.random.default_rng(args.seed)
@@ -105,15 +99,21 @@ def main() -> None:
     print(f"f(i) = ({a}*i^2 + {b}*i + {c}) mod {mod},   N = {big_n} objects")
     print(f"target t = {target} | simulated circuit: {total_q} qubits (~{mem_mb:.2f} MB statevector)\n")
 
-    values = f_values(n, m, a, b, c)
+    try:
+        values = f_values(n, m, a, b, c)
+    except ValueError as exc:
+        p.error(str(exc))
     print(f"{'i':>4} {'f(i)':>6} {'|f(i)-t|':>9}")
     for i, v in enumerate(values):
         print(f"{i:>4} {v:>6} {abs(v - target):>9}")
 
     print("\n--- Dürr–Høyer search ---")
-    result = closest_value_search(
-        n, m, a, b, c, target, rng=rng, simulator=simulator, force_unbounded=args.force_unbounded
-    )
+    try:
+        result = closest_value_search(
+            n, m, a, b, c, target, rng=rng, simulator=simulator, force_unbounded=args.force_unbounded
+        )
+    except ValueError as exc:
+        p.error(str(exc))
     print(f"{'round':>6} {'threshold':>10} {'grover its':>11} {'measured i':>11} "
           f"{'dist':>5}  improved")
     for r_i, r in enumerate(result.rounds):
@@ -196,7 +196,6 @@ def main() -> None:
             best_set=quantum_closest_set,
             target=target,
             n=n,
-            m=m,
             global_optima_set=best_set,
             save_path=amp_path,
             show=args.plot,

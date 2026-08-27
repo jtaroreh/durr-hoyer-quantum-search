@@ -114,7 +114,7 @@ def main() -> None:
         print(p_header)
         print("-" * len(p_header))
 
-    periodic_records = compute_periodic_scaling_records(max_n=args.max_n, m_fixed=4, a=a, b=b, c=c)
+    periodic_records = compute_periodic_scaling_records(max_n=args.max_n, m_fixed=4)
     if not periodic_records:
         if args.markdown:
             print("*Regime 2 omitted: requires $n \\ge 4$ ($N > 2^m$).*")
@@ -182,9 +182,9 @@ def main() -> None:
             "Both loaders connect to the identical downstream subtraction/comparator pipeline ($T_{\\text{common}} = O(m^2)$):\n"
         )
         print(
-            "| $n$ | $m$ | $N=2^n$ | QROM Loader $T$ ($8(N-1)$) | Coherent Loader $T$ ($\\\\varepsilon=10^{-4}$) | "
-            "Coherent Loader $T$ ($\\\\varepsilon=10^{-6}$) | Coherent Loader $T$ ($\\\\varepsilon=10^{-8}$) | "
-            "Coherent Loader $T$ ($\\\\varepsilon=10^{-10}$) | Loader Ratio ($\\\\varepsilon=10^{-6}$) |"
+            "| $n$ | $m$ | $N=2^n$ | QROM Loader $T$ ($8(N-1)$) | Coherent Loader $T$ ($\\varepsilon=10^{-4}$) | "
+            "Coherent Loader $T$ ($\\varepsilon=10^{-6}$) | Coherent Loader $T$ ($\\varepsilon=10^{-8}$) | "
+            "Coherent Loader $T$ ($\\varepsilon=10^{-10}$) | Loader Ratio ($\\varepsilon=10^{-6}$) |"
         )
         print(
             "| --: | --: | ------: | -------------------------: | -------------------------------------------: | "
@@ -240,9 +240,9 @@ def main() -> None:
             "allocating error budget $\\varepsilon_{\\text{stage}} = \\varepsilon / 2$ equally between value loading and downstream arithmetic:\n"
         )
         print(
-            "| $n$ | $m$ | $N=2^n$ | QROM Full Oracle $T$ ($\\\\varepsilon=10^{-6}$) | Coh Full Oracle $T$ ($\\\\varepsilon=10^{-4}$) | "
-            "Coh Full Oracle $T$ ($\\\\varepsilon=10^{-6}$) | Coh Full Oracle $T$ ($\\\\varepsilon=10^{-8}$) | "
-            "Coh Full Oracle $T$ ($\\\\varepsilon=10^{-10}$) | Oracle Ratio ($\\\\varepsilon=10^{-6}$) |"
+            "| $n$ | $m$ | $N=2^n$ | QROM Full Oracle $T$ ($\\varepsilon=10^{-6}$) | Coh Full Oracle $T$ ($\\varepsilon=10^{-4}$) | "
+            "Coh Full Oracle $T$ ($\\varepsilon=10^{-6}$) | Coh Full Oracle $T$ ($\\varepsilon=10^{-8}$) | "
+            "Coh Full Oracle $T$ ($\\varepsilon=10^{-10}$) | Oracle Ratio ($\\varepsilon=10^{-6}$) |"
         )
         print(
             "| --: | --: | ------: | -------------------------------------------: | ------------------------------------------: | "
